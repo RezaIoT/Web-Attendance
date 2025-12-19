@@ -1,0 +1,658 @@
+// Global state
+let currentUser = null;
+let activeSession = null;
+let allStudents = [];
+let allSessions = [];
+let currentDetailsSessionId = null;
+let refreshInterval = null;
+
+// ========================================
+// Initialization
+// ========================================
+
+document.addEventListener('DOMContentLoaded', () => {
+    checkAuth();
+    setupEventListeners();
+    setupTabs();
+});
+
+async function checkAuth() {
+    try {
+        const response = await fetch('/api/auth/status');
+        const data = await response.json();
+
+        if (!data.authenticated) {
+            window.location.href = '/teacher';
+            return;
+        }
+
+        currentUser = data.user;
+        document.getElementById('userName').textContent = currentUser.name || currentUser.username;
+
+        // Load initial data
+        await Promise.all([
+            loadActiveSession(),
+            loadStudents(),
+            loadSessions()
+        ]);
+
+        // Start auto-refresh for active session
+        startAutoRefresh();
+    } catch (err) {
+        console.error('Auth check failed:', err);
+        window.location.href = '/teacher';
+    }
+}
+
+function setupEventListeners() {
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', logout);
+
+    // Forms
+    document.getElementById('newSessionForm').addEventListener('submit', createSession);
+    document.getElementById('addStudentForm').addEventListener('submit', addStudent);
+    document.getElementById('editStudentForm').addEventListener('submit', updateStudent);
+    document.getElementById('bulkImportForm').addEventListener('submit', bulkImportStudents);
+
+    // Session toggle
+    document.getElementById('sessionToggle').addEventListener('change', toggleSession);
+
+    // Student search
+    document.getElementById('searchStudentInput').addEventListener('input', filterStudents);
+}
+
+function setupTabs() {
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabId = tab.dataset.tab;
+
+            tabs.forEach(t => t.classList.remove('active'));
+            tabContents.forEach(tc => tc.classList.remove('active'));
+
+            tab.classList.add('active');
+            document.getElementById(`${tabId}Tab`).classList.add('active');
+        });
+    });
+}
+
+// ========================================
+// Session Management
+// ========================================
+
+async function loadActiveSession() {
+    try {
+        const response = await fetch('/api/sessions/active');
+        activeSession = await response.json();
+        updateSessionUI();
+
+        if (activeSession) {
+            await loadSessionAttendance(activeSession.id);
+        }
+    } catch (err) {
+        console.error('Failed to load active session:', err);
+    }
+}
+
+function updateSessionUI() {
+    const noSession = document.getElementById('noActiveSession');
+    const sessionContent = document.getElementById('activeSessionContent');
+    const sessionStatus = document.getElementById('sessionStatus');
+    const noSessionAttendance = document.getElementById('noSessionAttendance');
+    const attendanceContent = document.getElementById('attendanceContent');
+
+    if (activeSession) {
+        noSession.classList.add('hidden');
+        sessionContent.classList.remove('hidden');
+
+        document.getElementById('activeSessionName').textContent = activeSession.name;
+        document.getElementById('activePasskey').textContent = activeSession.passkey;
+
+        const isActive = activeSession.is_active === 1;
+        document.getElementById('sessionToggle').checked = isActive;
+        document.getElementById('toggleLabel').textContent = isActive ? 'Active' : 'Inactive';
+
+        sessionStatus.innerHTML = isActive
+            ? '<span class="session-active"><span class="pulse-dot"></span> Active</span>'
+            : '<span class="badge badge-warning">Paused</span>';
+
+        noSessionAttendance.classList.add('hidden');
+        attendanceContent.classList.remove('hidden');
+    } else {
+        noSession.classList.remove('hidden');
+        sessionContent.classList.add('hidden');
+        sessionStatus.innerHTML = '<span class="badge badge-danger">No Active Session</span>';
+
+        noSessionAttendance.classList.remove('hidden');
+        attendanceContent.classList.add('hidden');
+    }
+}
+
+async function createSession(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('sessionName').value.trim();
+    const passkey = document.getElementById('sessionPasskey').value.trim();
+
+    try {
+        const response = await fetch('/api/sessions', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, passkey })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showToast('Session created successfully!', 'success');
+            closeModal('newSessionModal');
+            document.getElementById('newSessionForm').reset();
+            await Promise.all([loadActiveSession(), loadSessions()]);
+        } else {
+            showToast(data.error || 'Failed to create session', 'error');
+        }
+    } catch (err) {
+        showToast('Connection error', 'error');
+    }
+}
+
+async function toggleSession(e) {
+    if (!activeSession) return;
+
+    const isActive = e.target.checked;
+
+    try {
+        const response = await fetch(`/api/sessions/${activeSession.id}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: isActive })
+        });
+
+        if (response.ok) {
+            activeSession.is_active = isActive ? 1 : 0;
+            updateSessionUI();
+            showToast(isActive ? 'Session activated' : 'Session paused', 'success');
+        }
+    } catch (err) {
+        e.target.checked = !isActive;
+        showToast('Failed to toggle session', 'error');
+    }
+}
+
+async function loadSessionAttendance(sessionId) {
+    try {
+        const response = await fetch(`/api/attendance/session/${sessionId}`);
+        const data = await response.json();
+
+        renderAttendanceTable(data.students, data.attendance);
+        updateStats(data.summary);
+    } catch (err) {
+        console.error('Failed to load attendance:', err);
+    }
+}
+
+function renderAttendanceTable(students, attendance) {
+    const tbody = document.getElementById('attendanceTableBody');
+    const attendanceLookup = {};
+
+    attendance.forEach(a => {
+        attendanceLookup[a.student_id] = a;
+    });
+
+    tbody.innerHTML = students.map((student, index) => {
+        const att = attendanceLookup[student.id];
+        const statusBadge = student.is_present
+            ? '<span class="badge badge-success">Present</span>'
+            : '<span class="badge badge-danger">Absent</span>';
+        const time = att ? new Date(att.registered_at).toLocaleTimeString() : '-';
+        const device = att ? `${att.device_info}` : '-';
+
+        return `
+            <tr>
+                <td>${index + 1}</td>
+                <td>${escapeHtml(student.name)}</td>
+                <td class="rtl">${student.name_fa ? escapeHtml(student.name_fa) : '-'}</td>
+                <td>${statusBadge}</td>
+                <td>${time}</td>
+                <td style="font-size:0.75rem;color:var(--gray-500);">${device}</td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function updateStats(summary) {
+    document.getElementById('presentCount').textContent = summary?.present || 0;
+    document.getElementById('absentCount').textContent = summary?.absent || 0;
+}
+
+async function refreshAttendance() {
+    if (activeSession) {
+        await loadSessionAttendance(activeSession.id);
+        showToast('Attendance refreshed', 'success');
+    }
+}
+
+function startAutoRefresh() {
+    if (refreshInterval) clearInterval(refreshInterval);
+
+    refreshInterval = setInterval(async () => {
+        if (activeSession) {
+            await loadSessionAttendance(activeSession.id);
+        }
+    }, 10000); // Refresh every 10 seconds
+}
+
+function exportAttendance() {
+    if (!activeSession) return;
+    window.location.href = `/api/attendance/export/${activeSession.id}`;
+}
+
+// ========================================
+// Student Management
+// ========================================
+
+async function loadStudents() {
+    try {
+        const response = await fetch('/api/students');
+        allStudents = await response.json();
+
+        renderStudentsTable(allStudents);
+        document.getElementById('totalStudents').textContent = allStudents.length;
+    } catch (err) {
+        console.error('Failed to load students:', err);
+    }
+}
+
+function renderStudentsTable(students) {
+    const tbody = document.getElementById('studentsTableBody');
+    const noStudents = document.getElementById('noStudents');
+    const studentsContent = document.getElementById('studentsContent');
+
+    if (students.length === 0) {
+        noStudents.classList.remove('hidden');
+        studentsContent.classList.add('hidden');
+        return;
+    }
+
+    noStudents.classList.add('hidden');
+    studentsContent.classList.remove('hidden');
+
+    tbody.innerHTML = students.map((student, index) => `
+        <tr>
+            <td>${index + 1}</td>
+            <td>${escapeHtml(student.name)}</td>
+            <td class="rtl">${student.name_fa ? escapeHtml(student.name_fa) : '-'}</td>
+            <td>
+                <div class="actions">
+                    <button class="btn btn-secondary btn-sm" onclick="openEditStudentModal(${student.id}, '${escapeHtml(student.name)}', '${escapeHtml(student.name_fa || '')}')">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                        Edit
+                    </button>
+                    <button class="btn btn-danger btn-sm" onclick="deleteStudent(${student.id})">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    </button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterStudents(e) {
+    const query = e.target.value.toLowerCase();
+    const filtered = allStudents.filter(s =>
+        s.name.toLowerCase().includes(query) ||
+        (s.name_fa && s.name_fa.includes(query))
+    );
+    renderStudentsTable(filtered);
+}
+
+async function addStudent(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('studentName').value.trim();
+    const name_fa = document.getElementById('studentNameFa').value.trim();
+
+    try {
+        const response = await fetch('/api/students', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, name_fa })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showToast('Student added successfully!', 'success');
+            closeModal('addStudentModal');
+            document.getElementById('addStudentForm').reset();
+            await loadStudents();
+        } else {
+            showToast(data.error || 'Failed to add student', 'error');
+        }
+    } catch (err) {
+        showToast('Connection error', 'error');
+    }
+}
+
+async function updateStudent(e) {
+    e.preventDefault();
+
+    const id = document.getElementById('editStudentId').value;
+    const name = document.getElementById('editStudentName').value.trim();
+    const name_fa = document.getElementById('editStudentNameFa').value.trim();
+
+    try {
+        const response = await fetch(`/api/students/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, name_fa })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showToast('Student updated successfully!', 'success');
+            closeModal('editStudentModal');
+            await loadStudents();
+        } else {
+            showToast(data.error || 'Failed to update student', 'error');
+        }
+    } catch (err) {
+        showToast('Connection error', 'error');
+    }
+}
+
+async function deleteStudent(id) {
+    if (!confirm('Are you sure you want to delete this student?')) return;
+
+    try {
+        const response = await fetch(`/api/students/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            showToast('Student deleted', 'success');
+            await loadStudents();
+        } else {
+            showToast('Failed to delete student', 'error');
+        }
+    } catch (err) {
+        showToast('Connection error', 'error');
+    }
+}
+
+async function bulkImportStudents(e) {
+    e.preventDefault();
+
+    const text = document.getElementById('bulkStudents').value.trim();
+    const lines = text.split('\n').filter(line => line.trim());
+
+    const students = lines.map(line => {
+        const parts = line.split('|').map(p => p.trim());
+        return {
+            name: parts[0],
+            name_fa: parts[1] || null
+        };
+    }).filter(s => s.name);
+
+    if (students.length === 0) {
+        showToast('No valid student names found', 'error');
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/students/bulk', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ students })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showToast(data.message, 'success');
+            closeModal('bulkImportModal');
+            document.getElementById('bulkImportForm').reset();
+            await loadStudents();
+        } else {
+            showToast(data.error || 'Failed to import students', 'error');
+        }
+    } catch (err) {
+        showToast('Connection error', 'error');
+    }
+}
+
+// ========================================
+// Session History
+// ========================================
+
+async function loadSessions() {
+    try {
+        const response = await fetch('/api/sessions');
+        allSessions = await response.json();
+
+        renderSessionsTable(allSessions);
+        document.getElementById('totalSessions').textContent = allSessions.length;
+    } catch (err) {
+        console.error('Failed to load sessions:', err);
+    }
+}
+
+function renderSessionsTable(sessions) {
+    const tbody = document.getElementById('historyTableBody');
+    const noHistory = document.getElementById('noHistory');
+    const historyContent = document.getElementById('historyContent');
+
+    if (sessions.length === 0) {
+        noHistory.classList.remove('hidden');
+        historyContent.classList.add('hidden');
+        return;
+    }
+
+    noHistory.classList.add('hidden');
+    historyContent.classList.remove('hidden');
+
+    tbody.innerHTML = sessions.map(session => {
+        const date = new Date(session.created_at).toLocaleDateString();
+        const statusBadge = session.is_active
+            ? '<span class="badge badge-success">Active</span>'
+            : '<span class="badge badge-secondary">Closed</span>';
+
+        return `
+            <tr>
+                <td>${escapeHtml(session.name)}</td>
+                <td>${date}</td>
+                <td>${statusBadge}</td>
+                <td>${session.attendance_count} students</td>
+                <td>
+                    <div class="actions">
+                        <button class="btn btn-secondary btn-sm" onclick="viewSessionDetails(${session.id})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                            View
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="deleteSession(${session.id})">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+async function viewSessionDetails(sessionId) {
+    currentDetailsSessionId = sessionId;
+
+    try {
+        const response = await fetch(`/api/sessions/${sessionId}`);
+        const data = await response.json();
+
+        document.getElementById('sessionDetailsTitle').textContent = data.session.name;
+        document.getElementById('detailsPresent').textContent = data.summary.present;
+        document.getElementById('detailsAbsent').textContent = data.summary.absent;
+
+        const attendanceLookup = {};
+        data.attendance.forEach(a => {
+            attendanceLookup[a.student_id] = a;
+        });
+
+        const tbody = document.getElementById('sessionDetailsBody');
+        tbody.innerHTML = data.students.map(student => {
+            const att = attendanceLookup[student.id];
+            const status = student.is_present
+                ? '<span class="badge badge-success">Present</span>'
+                : '<span class="badge badge-danger">Absent</span>';
+            const time = att ? new Date(att.registered_at).toLocaleString() : '-';
+            const ip = att ? att.ip_address : '-';
+
+            return `
+                <tr>
+                    <td>
+                        <strong>${escapeHtml(student.name)}</strong>
+                        ${student.name_fa ? `<br><span class="rtl text-muted">${escapeHtml(student.name_fa)}</span>` : ''}
+                    </td>
+                    <td>${status}</td>
+                    <td>${time}</td>
+                    <td style="font-size:0.8rem;">${ip}</td>
+                </tr>
+            `;
+        }).join('');
+
+        openModal('sessionDetailsModal');
+    } catch (err) {
+        showToast('Failed to load session details', 'error');
+    }
+}
+
+function exportSessionAttendance() {
+    if (!currentDetailsSessionId) return;
+    window.location.href = `/api/attendance/export/${currentDetailsSessionId}`;
+}
+
+async function deleteSession(id) {
+    if (!confirm('Are you sure you want to delete this session? All attendance records will be lost.')) return;
+
+    try {
+        const response = await fetch(`/api/sessions/${id}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            showToast('Session deleted', 'success');
+            await Promise.all([loadActiveSession(), loadSessions()]);
+        } else {
+            showToast('Failed to delete session', 'error');
+        }
+    } catch (err) {
+        showToast('Connection error', 'error');
+    }
+}
+
+// ========================================
+// Auth
+// ========================================
+
+async function logout() {
+    try {
+        await fetch('/api/auth/logout', { method: 'POST' });
+        window.location.href = '/teacher';
+    } catch (err) {
+        window.location.href = '/teacher';
+    }
+}
+
+// ========================================
+// Modal Functions
+// ========================================
+
+function openModal(modalId) {
+    document.getElementById(modalId).classList.add('active');
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.remove('active');
+}
+
+function openNewSessionModal() {
+    document.getElementById('newSessionForm').reset();
+    openModal('newSessionModal');
+}
+
+function openAddStudentModal() {
+    document.getElementById('addStudentForm').reset();
+    openModal('addStudentModal');
+}
+
+function openEditStudentModal(id, name, nameFa) {
+    document.getElementById('editStudentId').value = id;
+    document.getElementById('editStudentName').value = name;
+    document.getElementById('editStudentNameFa').value = nameFa;
+    openModal('editStudentModal');
+}
+
+function openBulkImportModal() {
+    document.getElementById('bulkImportForm').reset();
+    openModal('bulkImportModal');
+}
+
+function generateRandomPasskey() {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let passkey = '';
+    for (let i = 0; i < 6; i++) {
+        passkey += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('sessionPasskey').value = passkey;
+}
+
+// Close modal on overlay click
+document.querySelectorAll('.modal-overlay').forEach(overlay => {
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            overlay.classList.remove('active');
+        }
+    });
+});
+
+// Close modal on Escape key
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+        document.querySelectorAll('.modal-overlay.active').forEach(modal => {
+            modal.classList.remove('active');
+        });
+    }
+});
+
+// ========================================
+// Utility Functions
+// ========================================
+
+function showToast(message, type = 'success') {
+    const container = document.getElementById('toastContainer');
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            ${type === 'success'
+                ? '<polyline points="20 6 9 17 4 12"/>'
+                : '<circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>'
+            }
+        </svg>
+        <span>${escapeHtml(message)}</span>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideIn 0.3s ease reverse';
+        setTimeout(() => toast.remove(), 300);
+    }, 3000);
+}
+
+function escapeHtml(text) {
+    if (!text) return '';
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}

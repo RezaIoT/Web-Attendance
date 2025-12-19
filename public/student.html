@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Student Attendance - Register Your Presence</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Vazirmatn:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="student-container">
+        <!-- Passkey Entry Section -->
+        <div id="passkeySection" class="student-card">
+            <div class="student-header">
+                <div class="logo-icon" style="width:56px;height:56px;margin:0 auto 1rem;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+                        <circle cx="9" cy="7" r="4"/>
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+                    </svg>
+                </div>
+                <h1>Student Attendance</h1>
+                <p>Enter the class passkey provided by your teacher</p>
+            </div>
+
+            <form id="passkeyForm">
+                <div class="form-group">
+                    <label class="form-label" for="passkey">Class Passkey</label>
+                    <input type="text" id="passkey" name="passkey" class="form-control text-center"
+                           placeholder="Enter passkey" required autocomplete="off"
+                           style="font-size:1.25rem; letter-spacing:0.1em; font-weight:600;">
+                </div>
+                <div id="passkeyError" class="alert alert-danger hidden"></div>
+                <button type="submit" class="btn btn-primary btn-lg" style="width:100%;" id="verifyBtn">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                    </svg>
+                    Verify Passkey
+                </button>
+            </form>
+
+            <div class="mt-4 text-center">
+                <a href="/" class="text-muted" style="text-decoration: none; font-size: 0.875rem;">
+                    &larr; Back to Home
+                </a>
+            </div>
+        </div>
+
+        <!-- Student Selection Section -->
+        <div id="attendanceSection" class="student-card hidden">
+            <div class="student-header">
+                <h1 id="sessionName">Class Session</h1>
+                <p>Select your name and register your attendance</p>
+            </div>
+
+            <div class="form-group">
+                <div class="search-wrapper">
+                    <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="11" cy="11" r="8"/>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                    </svg>
+                    <input type="text" id="searchStudent" class="form-control" placeholder="Search your name / جستجوی نام">
+                </div>
+            </div>
+
+            <div id="studentList" class="student-list">
+                <!-- Students will be loaded here -->
+            </div>
+
+            <div id="registerError" class="alert alert-danger hidden"></div>
+
+            <button id="registerBtn" class="btn btn-success btn-lg" style="width:100%;" disabled>
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="20 6 9 17 4 12"/>
+                </svg>
+                Register Attendance
+            </button>
+
+            <div class="mt-3 text-center">
+                <button id="backToPasskey" class="btn btn-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="19" y1="12" x2="5" y2="12"/>
+                        <polyline points="12 19 5 12 12 5"/>
+                    </svg>
+                    Back
+                </button>
+            </div>
+        </div>
+
+        <!-- Success Section -->
+        <div id="successSection" class="student-card hidden">
+            <div class="success-message">
+                <div class="success-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="20 6 9 17 4 12"/>
+                    </svg>
+                </div>
+                <h2>Attendance Registered!</h2>
+                <p class="text-muted mt-2" id="successName">Your attendance has been recorded.</p>
+                <p class="text-muted" id="successTime"></p>
+            </div>
+            <a href="/" class="btn btn-primary btn-lg mt-4" style="width:100%;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+                    <polyline points="9 22 9 12 15 12 15 22"/>
+                </svg>
+                Back to Home
+            </a>
+        </div>
+    </div>
+
+    <script>
+        let currentSession = null;
+        let currentPasskey = null;
+        let selectedStudentId = null;
+        let allStudents = [];
+
+        // DOM Elements
+        const passkeySection = document.getElementById('passkeySection');
+        const attendanceSection = document.getElementById('attendanceSection');
+        const successSection = document.getElementById('successSection');
+        const passkeyForm = document.getElementById('passkeyForm');
+        const passkeyError = document.getElementById('passkeyError');
+        const studentList = document.getElementById('studentList');
+        const searchInput = document.getElementById('searchStudent');
+        const registerBtn = document.getElementById('registerBtn');
+        const registerError = document.getElementById('registerError');
+
+        // Verify passkey
+        passkeyForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const passkey = document.getElementById('passkey').value.trim();
+            const btn = document.getElementById('verifyBtn');
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Verifying...';
+            passkeyError.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/attendance/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ passkey })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    currentSession = data.session;
+                    currentPasskey = passkey;
+                    allStudents = data.students;
+
+                    document.getElementById('sessionName').textContent = data.session.name;
+                    renderStudents(allStudents);
+
+                    passkeySection.classList.add('hidden');
+                    attendanceSection.classList.remove('hidden');
+                } else {
+                    passkeyError.textContent = data.error || 'Invalid passkey or session not active';
+                    passkeyError.classList.remove('hidden');
+                }
+            } catch (err) {
+                passkeyError.textContent = 'Connection error. Please try again.';
+                passkeyError.classList.remove('hidden');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+                </svg> Verify Passkey`;
+            }
+        });
+
+        // Render student list
+        function renderStudents(students) {
+            if (students.length === 0) {
+                studentList.innerHTML = `
+                    <div class="empty-state" style="padding:2rem;">
+                        <p>No students found</p>
+                    </div>
+                `;
+                return;
+            }
+
+            studentList.innerHTML = students.map(student => `
+                <label class="student-item" data-id="${student.id}">
+                    <input type="radio" name="student" value="${student.id}">
+                    <div class="student-name">
+                        <div class="student-name-en">${escapeHtml(student.name)}</div>
+                        ${student.name_fa ? `<div class="student-name-fa">${escapeHtml(student.name_fa)}</div>` : ''}
+                    </div>
+                </label>
+            `).join('');
+
+            // Add click handlers
+            document.querySelectorAll('.student-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.student-item').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    selectedStudentId = parseInt(item.dataset.id);
+                    registerBtn.disabled = false;
+                });
+            });
+        }
+
+        // Search students
+        searchInput.addEventListener('input', (e) => {
+            const query = e.target.value.toLowerCase();
+            const filtered = allStudents.filter(s =>
+                s.name.toLowerCase().includes(query) ||
+                (s.name_fa && s.name_fa.includes(query))
+            );
+            renderStudents(filtered);
+            selectedStudentId = null;
+            registerBtn.disabled = true;
+        });
+
+        // Register attendance
+        registerBtn.addEventListener('click', async () => {
+            if (!selectedStudentId || !currentPasskey) return;
+
+            registerBtn.disabled = true;
+            registerBtn.innerHTML = '<span class="spinner" style="width:18px;height:18px;border-width:2px;"></span> Registering...';
+            registerError.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/attendance/register', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        passkey: currentPasskey,
+                        student_id: selectedStudentId
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    document.getElementById('successName').textContent =
+                        `${data.student_name}, your attendance has been recorded.`;
+                    document.getElementById('successTime').textContent =
+                        `Time: ${new Date().toLocaleString()}`;
+
+                    attendanceSection.classList.add('hidden');
+                    successSection.classList.remove('hidden');
+                } else {
+                    registerError.textContent = data.error || 'Failed to register attendance';
+                    registerError.classList.remove('hidden');
+                    registerBtn.disabled = false;
+                }
+            } catch (err) {
+                registerError.textContent = 'Connection error. Please try again.';
+                registerError.classList.remove('hidden');
+                registerBtn.disabled = false;
+            }
+
+            registerBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+            </svg> Register Attendance`;
+        });
+
+        // Back button
+        document.getElementById('backToPasskey').addEventListener('click', () => {
+            attendanceSection.classList.add('hidden');
+            passkeySection.classList.remove('hidden');
+            currentSession = null;
+            currentPasskey = null;
+            selectedStudentId = null;
+            allStudents = [];
+            document.getElementById('passkey').value = '';
+        });
+
+        // Escape HTML helper
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+    </script>
+</body>
+</html>
