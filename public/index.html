@@ -16,6 +16,9 @@
             margin-top: 2rem;
             text-align: left;
         }
+        .rtl .feature-grid {
+            text-align: right;
+        }
         .feature-item {
             display: flex;
             gap: 1rem;
@@ -42,10 +45,49 @@
             font-size: 0.8rem;
             color: var(--gray-500);
         }
+        .lang-switcher {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+        .rtl .lang-switcher {
+            right: auto;
+            left: 1rem;
+        }
+        .lang-btn {
+            padding: 0.5rem 1rem;
+            border: 2px solid var(--gray-200);
+            background: white;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: var(--transition);
+        }
+        .lang-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+        .lang-btn.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: white;
+        }
+        .home-container {
+            position: relative;
+        }
     </style>
 </head>
 <body>
     <div class="home-container">
+        <!-- Language Switcher -->
+        <div class="lang-switcher">
+            <button class="lang-btn" data-lang="en">English</button>
+            <button class="lang-btn" data-lang="fa">فارسی</button>
+        </div>
+
         <div class="home-card">
             <div class="home-logo">
                 <div class="logo-icon">
@@ -57,8 +99,8 @@
                     </svg>
                 </div>
             </div>
-            <h1 class="home-title">Student Attendance System</h1>
-            <p class="home-subtitle">Modern and easy-to-use classroom attendance tracking</p>
+            <h1 class="home-title" data-i18n="homeTitle">Student Attendance System</h1>
+            <p class="home-subtitle" data-i18n="homeSubtitle">Modern and easy-to-use classroom attendance tracking</p>
 
             <div class="home-buttons">
                 <a href="/teacher" class="btn btn-primary btn-lg">
@@ -66,7 +108,7 @@
                         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
                         <circle cx="12" cy="7" r="4"/>
                     </svg>
-                    Teacher Login
+                    <span data-i18n="teacherLogin">Teacher Login</span>
                 </a>
                 <a href="/student" class="btn btn-outline btn-lg">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -75,7 +117,7 @@
                         <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
                         <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
                     </svg>
-                    Student Attendance
+                    <span data-i18n="studentAttendance">Student Attendance</span>
                 </a>
             </div>
 
@@ -87,8 +129,8 @@
                         </svg>
                     </div>
                     <div class="feature-text">
-                        <h4>Secure Access</h4>
-                        <p>Session-based passkeys for each class</p>
+                        <h4 data-i18n="featureSecure">Secure Access</h4>
+                        <p data-i18n="featureSecureDesc">Session-based passkeys for each class</p>
                     </div>
                 </div>
                 <div class="feature-item">
@@ -100,8 +142,8 @@
                         </svg>
                     </div>
                     <div class="feature-text">
-                        <h4>Multi-Device</h4>
-                        <p>Works on desktop and mobile</p>
+                        <h4 data-i18n="featureMultiDevice">Multi-Device</h4>
+                        <p data-i18n="featureMultiDeviceDesc">Works on desktop and mobile</p>
                     </div>
                 </div>
                 <div class="feature-item">
@@ -113,8 +155,8 @@
                         </svg>
                     </div>
                     <div class="feature-text">
-                        <h4>Export Data</h4>
-                        <p>Download attendance as CSV</p>
+                        <h4 data-i18n="featureExport">Export Data</h4>
+                        <p data-i18n="featureExportDesc">Download attendance as CSV</p>
                     </div>
                 </div>
                 <div class="feature-item">
@@ -125,12 +167,47 @@
                         </svg>
                     </div>
                     <div class="feature-text">
-                        <h4>Real-time</h4>
-                        <p>Instant attendance updates</p>
+                        <h4 data-i18n="featureRealtime">Real-time</h4>
+                        <p data-i18n="featureRealtimeDesc">Instant attendance updates</p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
+    <script src="/js/translations.js"></script>
+    <script>
+        // Update all elements with data-i18n attribute
+        function updatePageLanguage() {
+            document.querySelectorAll('[data-i18n]').forEach(el => {
+                const key = el.getAttribute('data-i18n');
+                el.textContent = t(key);
+            });
+            document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+                const key = el.getAttribute('data-i18n-placeholder');
+                el.placeholder = t(key);
+            });
+
+            // Update active state on language buttons
+            document.querySelectorAll('.lang-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.dataset.lang === lang.getLanguage());
+            });
+
+            // Update page title
+            document.title = t('appName');
+        }
+
+        // Language button click handlers
+        document.querySelectorAll('.lang-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                lang.setLanguage(btn.dataset.lang);
+                updatePageLanguage();
+            });
+        });
+
+        // Initialize
+        lang.init();
+        updatePageLanguage();
+    </script>
 </body>
 </html>

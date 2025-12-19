@@ -11,10 +11,48 @@ let refreshInterval = null;
 // ========================================
 
 document.addEventListener('DOMContentLoaded', () => {
+    lang.init();
+    updatePageLanguage();
+    setupLanguageSwitcher();
     checkAuth();
     setupEventListeners();
     setupTabs();
 });
+
+function setupLanguageSwitcher() {
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            lang.setLanguage(btn.dataset.lang);
+            updatePageLanguage();
+            // Re-render dynamic content
+            if (allStudents.length > 0) {
+                renderStudentsTable(allStudents);
+            }
+            if (allSessions.length > 0) {
+                renderSessionsTable(allSessions);
+            }
+            if (activeSession) {
+                loadSessionAttendance(activeSession.id);
+            }
+            updateSessionUI();
+        });
+    });
+}
+
+function updatePageLanguage() {
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        el.textContent = t(key);
+    });
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+        const key = el.getAttribute('data-i18n-placeholder');
+        el.placeholder = t(key);
+    });
+    document.querySelectorAll('.lang-btn').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.lang === lang.getLanguage());
+    });
+    document.title = t('appName') + ' - Dashboard';
+}
 
 async function checkAuth() {
     try {
@@ -112,18 +150,18 @@ function updateSessionUI() {
 
         const isActive = activeSession.is_active === 1;
         document.getElementById('sessionToggle').checked = isActive;
-        document.getElementById('toggleLabel').textContent = isActive ? 'Active' : 'Inactive';
+        document.getElementById('toggleLabel').textContent = isActive ? t('active') : t('inactive');
 
         sessionStatus.innerHTML = isActive
-            ? '<span class="session-active"><span class="pulse-dot"></span> Active</span>'
-            : '<span class="badge badge-warning">Paused</span>';
+            ? `<span class="session-active"><span class="pulse-dot"></span> ${t('active')}</span>`
+            : `<span class="badge badge-warning">${t('paused')}</span>`;
 
         noSessionAttendance.classList.add('hidden');
         attendanceContent.classList.remove('hidden');
     } else {
         noSession.classList.remove('hidden');
         sessionContent.classList.add('hidden');
-        sessionStatus.innerHTML = '<span class="badge badge-danger">No Active Session</span>';
+        sessionStatus.innerHTML = `<span class="badge badge-danger">${t('noActiveSession')}</span>`;
 
         noSessionAttendance.classList.remove('hidden');
         attendanceContent.classList.add('hidden');
@@ -146,15 +184,15 @@ async function createSession(e) {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            showToast('Session created successfully!', 'success');
+            showToast(t('sessionCreated'), 'success');
             closeModal('newSessionModal');
             document.getElementById('newSessionForm').reset();
             await Promise.all([loadActiveSession(), loadSessions()]);
         } else {
-            showToast(data.error || 'Failed to create session', 'error');
+            showToast(data.error || t('failedToCreate'), 'error');
         }
     } catch (err) {
-        showToast('Connection error', 'error');
+        showToast(t('connectionError'), 'error');
     }
 }
 
@@ -173,11 +211,11 @@ async function toggleSession(e) {
         if (response.ok) {
             activeSession.is_active = isActive ? 1 : 0;
             updateSessionUI();
-            showToast(isActive ? 'Session activated' : 'Session paused', 'success');
+            showToast(isActive ? t('sessionActivated') : t('sessionPaused'), 'success');
         }
     } catch (err) {
         e.target.checked = !isActive;
-        showToast('Failed to toggle session', 'error');
+        showToast(t('failedToUpdate'), 'error');
     }
 }
 
@@ -204,8 +242,8 @@ function renderAttendanceTable(students, attendance) {
     tbody.innerHTML = students.map((student, index) => {
         const att = attendanceLookup[student.id];
         const statusBadge = student.is_present
-            ? '<span class="badge badge-success">Present</span>'
-            : '<span class="badge badge-danger">Absent</span>';
+            ? `<span class="badge badge-success">${t('present')}</span>`
+            : `<span class="badge badge-danger">${t('absent')}</span>`;
         const time = att ? new Date(att.registered_at).toLocaleTimeString() : '-';
         const device = att ? `${att.device_info}` : '-';
 
@@ -230,7 +268,7 @@ function updateStats(summary) {
 async function refreshAttendance() {
     if (activeSession) {
         await loadSessionAttendance(activeSession.id);
-        showToast('Attendance refreshed', 'success');
+        showToast(t('attendanceRefreshed'), 'success');
     }
 }
 
@@ -288,7 +326,7 @@ function renderStudentsTable(students) {
                 <div class="actions">
                     <button class="btn btn-secondary btn-sm" onclick="openEditStudentModal(${student.id}, '${escapeHtml(student.name)}', '${escapeHtml(student.name_fa || '')}')">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        Edit
+                        ${t('edit')}
                     </button>
                     <button class="btn btn-danger btn-sm" onclick="deleteStudent(${student.id})">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -324,15 +362,15 @@ async function addStudent(e) {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            showToast('Student added successfully!', 'success');
+            showToast(t('studentAdded'), 'success');
             closeModal('addStudentModal');
             document.getElementById('addStudentForm').reset();
             await loadStudents();
         } else {
-            showToast(data.error || 'Failed to add student', 'error');
+            showToast(data.error || t('failedToCreate'), 'error');
         }
     } catch (err) {
-        showToast('Connection error', 'error');
+        showToast(t('connectionError'), 'error');
     }
 }
 
@@ -353,19 +391,19 @@ async function updateStudent(e) {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            showToast('Student updated successfully!', 'success');
+            showToast(t('studentUpdated'), 'success');
             closeModal('editStudentModal');
             await loadStudents();
         } else {
-            showToast(data.error || 'Failed to update student', 'error');
+            showToast(data.error || t('failedToUpdate'), 'error');
         }
     } catch (err) {
-        showToast('Connection error', 'error');
+        showToast(t('connectionError'), 'error');
     }
 }
 
 async function deleteStudent(id) {
-    if (!confirm('Are you sure you want to delete this student?')) return;
+    if (!confirm(t('confirmDeleteStudent'))) return;
 
     try {
         const response = await fetch(`/api/students/${id}`, {
@@ -373,13 +411,13 @@ async function deleteStudent(id) {
         });
 
         if (response.ok) {
-            showToast('Student deleted', 'success');
+            showToast(t('studentDeleted'), 'success');
             await loadStudents();
         } else {
-            showToast('Failed to delete student', 'error');
+            showToast(t('failedToDelete'), 'error');
         }
     } catch (err) {
-        showToast('Connection error', 'error');
+        showToast(t('connectionError'), 'error');
     }
 }
 
@@ -398,7 +436,7 @@ async function bulkImportStudents(e) {
     }).filter(s => s.name);
 
     if (students.length === 0) {
-        showToast('No valid student names found', 'error');
+        showToast(t('studentNameRequired'), 'error');
         return;
     }
 
@@ -412,15 +450,15 @@ async function bulkImportStudents(e) {
         const data = await response.json();
 
         if (response.ok && data.success) {
-            showToast(data.message, 'success');
+            showToast(`${students.length} ${t('studentsImported')}`, 'success');
             closeModal('bulkImportModal');
             document.getElementById('bulkImportForm').reset();
             await loadStudents();
         } else {
-            showToast(data.error || 'Failed to import students', 'error');
+            showToast(data.error || t('failedToCreate'), 'error');
         }
     } catch (err) {
-        showToast('Connection error', 'error');
+        showToast(t('connectionError'), 'error');
     }
 }
 
@@ -457,20 +495,20 @@ function renderSessionsTable(sessions) {
     tbody.innerHTML = sessions.map(session => {
         const date = new Date(session.created_at).toLocaleDateString();
         const statusBadge = session.is_active
-            ? '<span class="badge badge-success">Active</span>'
-            : '<span class="badge badge-secondary">Closed</span>';
+            ? `<span class="badge badge-success">${t('active')}</span>`
+            : `<span class="badge badge-secondary">${t('closed')}</span>`;
 
         return `
             <tr>
                 <td>${escapeHtml(session.name)}</td>
                 <td>${date}</td>
                 <td>${statusBadge}</td>
-                <td>${session.attendance_count} students</td>
+                <td>${session.attendance_count} ${t('students')}</td>
                 <td>
                     <div class="actions">
                         <button class="btn btn-secondary btn-sm" onclick="viewSessionDetails(${session.id})">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                            View
+                            ${t('view')}
                         </button>
                         <button class="btn btn-danger btn-sm" onclick="deleteSession(${session.id})">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
@@ -502,8 +540,8 @@ async function viewSessionDetails(sessionId) {
         tbody.innerHTML = data.students.map(student => {
             const att = attendanceLookup[student.id];
             const status = student.is_present
-                ? '<span class="badge badge-success">Present</span>'
-                : '<span class="badge badge-danger">Absent</span>';
+                ? `<span class="badge badge-success">${t('present')}</span>`
+                : `<span class="badge badge-danger">${t('absent')}</span>`;
             const time = att ? new Date(att.registered_at).toLocaleString() : '-';
             const ip = att ? att.ip_address : '-';
 
@@ -522,7 +560,7 @@ async function viewSessionDetails(sessionId) {
 
         openModal('sessionDetailsModal');
     } catch (err) {
-        showToast('Failed to load session details', 'error');
+        showToast(t('failedToLoad'), 'error');
     }
 }
 
@@ -532,7 +570,7 @@ function exportSessionAttendance() {
 }
 
 async function deleteSession(id) {
-    if (!confirm('Are you sure you want to delete this session? All attendance records will be lost.')) return;
+    if (!confirm(t('confirmDeleteSession'))) return;
 
     try {
         const response = await fetch(`/api/sessions/${id}`, {
@@ -540,13 +578,13 @@ async function deleteSession(id) {
         });
 
         if (response.ok) {
-            showToast('Session deleted', 'success');
+            showToast(t('sessionDeleted'), 'success');
             await Promise.all([loadActiveSession(), loadSessions()]);
         } else {
-            showToast('Failed to delete session', 'error');
+            showToast(t('failedToDelete'), 'error');
         }
     } catch (err) {
-        showToast('Connection error', 'error');
+        showToast(t('connectionError'), 'error');
     }
 }
 
