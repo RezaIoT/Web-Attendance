@@ -204,15 +204,18 @@ router.get('/export/:sessionId', isAuthenticated, (req, res) => {
             csv += `"${name}","${nameFa}","${status}","${time}","${ip}","${device}"\n`;
         });
 
-        // Sanitize filename - remove special characters, default to 'session' if empty
-        const safeSessionName = (session.name || 'session').replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '').replace(/\s+/g, '_').substring(0, 50) || 'session';
+        // Sanitize filename - only allow ASCII characters for HTTP header compatibility
+        const safeSessionName = (session.name || 'session')
+            .replace(/[^a-zA-Z0-9\s-]/g, '')  // Remove non-ASCII characters
+            .replace(/\s+/g, '_')
+            .substring(0, 50) || 'session';
         const dateStr = new Date().toISOString().split('T')[0];
         const filename = `attendance_${safeSessionName}_${dateStr}.csv`;
 
         console.log('Sending CSV file:', filename);
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-        res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
         res.send(csv);
     } catch (err) {
         console.error('Export error:', err.message);
