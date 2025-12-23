@@ -165,13 +165,23 @@ router.get('/export/:sessionId', isAuthenticated, (req, res) => {
     const { sessionId } = req.params;
 
     try {
+        console.log('Export request for session:', sessionId, 'by teacher:', req.session.teacherId);
+
         const session = db.getSessionById(parseInt(sessionId));
-        if (!session || session.teacher_id !== req.session.teacherId) {
+        if (!session) {
+            console.log('Session not found:', sessionId);
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        if (session.teacher_id !== req.session.teacherId) {
+            console.log('Teacher mismatch:', session.teacher_id, '!=', req.session.teacherId);
             return res.status(404).json({ error: 'Session not found' });
         }
 
         const students = db.getStudentsForSession(req.session.teacherId, parseInt(sessionId));
         const attendance = db.getSessionAttendance(parseInt(sessionId));
+
+        console.log('Found', students.length, 'students and', attendance.length, 'attendance records');
 
         // Create attendance lookup
         const attendanceLookup = {};
@@ -182,28 +192,32 @@ router.get('/export/:sessionId', isAuthenticated, (req, res) => {
         // Build CSV with BOM for UTF-8 support in Excel
         const BOM = '\uFEFF';
         let csv = BOM + 'Name,Name (Farsi),Status,Time,IP Address,Device\n';
+
         students.forEach(student => {
             const att = attendanceLookup[student.id];
             const status = student.is_present ? 'Present' : 'Absent';
             const time = att ? new Date(att.registered_at).toLocaleString() : '';
-            const ip = att ? att.ip_address : '';
+            const ip = att ? (att.ip_address || '') : '';
             const device = att ? (att.device_info || '').replace(/"/g, '""') : '';
             const name = (student.name || '').replace(/"/g, '""');
             const nameFa = (student.name_fa || '').replace(/"/g, '""');
             csv += `"${name}","${nameFa}","${status}","${time}","${ip}","${device}"\n`;
         });
 
-        // Sanitize filename - remove special characters
-        const safeSessionName = session.name.replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '').replace(/\s+/g, '_').substring(0, 50);
+        // Sanitize filename - remove special characters, default to 'session' if empty
+        const safeSessionName = (session.name || 'session').replace(/[^a-zA-Z0-9\u0600-\u06FF\s-]/g, '').replace(/\s+/g, '_').substring(0, 50) || 'session';
         const dateStr = new Date().toISOString().split('T')[0];
         const filename = `attendance_${safeSessionName}_${dateStr}.csv`;
+
+        console.log('Sending CSV file:', filename);
 
         res.setHeader('Content-Type', 'text/csv; charset=utf-8');
         res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
         res.send(csv);
     } catch (err) {
-        console.error('Export error:', err);
-        res.status(500).json({ error: 'Failed to export attendance' });
+        console.error('Export error:', err.message);
+        console.error('Stack:', err.stack);
+        res.status(500).json({ error: 'Failed to export attendance: ' + err.message });
     }
 });
 
