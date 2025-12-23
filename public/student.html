@@ -322,9 +322,16 @@
                     attendanceSection.classList.add('hidden');
                     successSection.classList.remove('hidden');
                 } else {
-                    registerError.textContent = data.error === 'You have already registered your attendance'
-                        ? t('alreadyRegistered')
-                        : data.error;
+                    let errorMessage;
+                    if (data.already_registered) {
+                        errorMessage = t('alreadyRegistered');
+                    } else if (data.ip_already_used) {
+                        // Use bilingual error message based on current language
+                        errorMessage = lang.getLanguage() === 'fa' ? data.error_fa : data.error;
+                    } else {
+                        errorMessage = data.error;
+                    }
+                    registerError.textContent = errorMessage;
                     registerError.classList.remove('hidden');
                     registerBtn.disabled = false;
                 }

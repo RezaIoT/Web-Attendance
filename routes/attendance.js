@@ -92,14 +92,19 @@ router.post('/register', (req, res) => {
         const browser = ua.browser;
         const os = ua.os;
 
-        // Check if same IP already registered multiple times
+        // Check if same IP already registered in this session (prevent fraud)
         const ipAttendances = db.getAttendanceByIp(session.id, req.clientIp);
-        const maxRegistrationsPerIp = 3; // Allow max 3 registrations per IP
 
-        if (ipAttendances.length >= maxRegistrationsPerIp) {
+        if (ipAttendances.length > 0) {
+            // Get the name of the student who already registered from this IP
+            const existingStudent = students.find(s => s.id === ipAttendances[0].student_id);
+            const existingName = existingStudent ? existingStudent.name : 'another student';
+
             return res.status(403).json({
-                error: `Maximum ${maxRegistrationsPerIp} registrations allowed from the same device/network`,
-                ip_limit_reached: true
+                error: `This device/IP has already been used to register attendance for ${existingName}. Each device can only register once per session.`,
+                error_fa: `این دستگاه/آی‌پی قبلاً برای ثبت حضور ${existingStudent ? existingStudent.name_fa || existingStudent.name : 'دانشجوی دیگر'} استفاده شده است. هر دستگاه فقط یک بار در هر جلسه می‌تواند ثبت حضور کند.`,
+                ip_already_used: true,
+                registered_student: existingName
             });
         }
 
