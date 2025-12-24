@@ -169,7 +169,7 @@ const translations = {
 
     fa: {
         // Common
-        appName: "سیستم حضور و غیاب دانش‌آموزان",
+        appName: "سیستم حضور و غیاب دانشجویان",
         loading: "در حال بارگذاری...",
         save: "ذخیره",
         cancel: "انصراف",
@@ -187,10 +187,10 @@ const translations = {
         warning: "هشدار",
 
         // Home Page
-        homeTitle: "سیستم حضور و غیاب دانش‌آموزان",
+        homeTitle: "سیستم حضور و غیاب دانشجویان",
         homeSubtitle: "ثبت حضور و غیاب کلاسی به روش مدرن و آسان",
-        teacherLogin: "ورود معلم",
-        studentAttendance: "حضور و غیاب دانش‌آموز",
+        teacherLogin: "ورود استاد",
+        studentAttendance: "حضور و غیاب دانشجو",
         featureSecure: "دسترسی امن",
         featureSecureDesc: "کلید عبور اختصاصی برای هر جلسه",
         featureMultiDevice: "چند دستگاهی",
@@ -201,7 +201,7 @@ const translations = {
         featureRealtimeDesc: "بروزرسانی آنی حضور و غیاب",
 
         // Login Page
-        loginTitle: "ورود معلم",
+        loginTitle: "ورود استاد",
         loginSubtitle: "نام کاربری و رمز عبور خود را وارد کنید",
         username: "نام کاربری",
         password: "رمز عبور",
@@ -214,8 +214,8 @@ const translations = {
         connectionError: "خطا در اتصال. لطفا دوباره تلاش کنید.",
 
         // Student Page
-        studentTitle: "حضور و غیاب دانش‌آموز",
-        studentSubtitle: "کلید عبور کلاس را که معلم داده است وارد کنید",
+        studentTitle: "حضور و غیاب دانشجو",
+        studentSubtitle: "کلید عبور کلاس را که استاد داده است وارد کنید",
         classPasskey: "کلید عبور کلاس",
         enterPasskey: "کلید عبور را وارد کنید",
         verifyPasskey: "تایید کلید عبور",
@@ -228,7 +228,7 @@ const translations = {
         attendanceRegistered: "حضور شما ثبت شد!",
         attendanceRecorded: "حضور شما با موفقیت ثبت گردید.",
         alreadyRegistered: "شما قبلا حضور خود را ثبت کرده‌اید",
-        noStudentsFound: "دانش‌آموزی یافت نشد",
+        noStudentsFound: "دانشجویی یافت نشد",
         time: "زمان",
 
         // Dashboard
@@ -241,27 +241,27 @@ const translations = {
         createSessionPrompt: "برای شروع ثبت حضور و غیاب یک جلسه جدید ایجاد کنید",
         createNewSession: "ایجاد جلسه جدید",
         sessionName: "نام جلسه",
-        studentLinkStatus: "وضعیت لینک دانش‌آموز",
+        studentLinkStatus: "وضعیت لینک دانشجو",
         active: "فعال",
         inactive: "غیرفعال",
         paused: "متوقف",
-        sharePasskey: "این کلید عبور را با دانش‌آموزان به اشتراک بگذارید",
+        sharePasskey: "این کلید عبور را با دانشجویان به اشتراک بگذارید",
         newSession: "جلسه جدید",
         refresh: "بروزرسانی",
 
         // Stats
-        totalStudents: "کل دانش‌آموزان",
+        totalStudents: "کل دانشجویان",
         present: "حاضر",
         absent: "غایب",
         totalSessions: "کل جلسات",
 
         // Tabs
         liveAttendance: "حضور و غیاب زنده",
-        manageStudents: "مدیریت دانش‌آموزان",
+        manageStudents: "مدیریت دانشجویان",
         sessionHistory: "تاریخچه جلسات",
 
         // Attendance Tab
-        studentName: "نام دانش‌آموز",
+        studentName: "نام دانشجو",
         nameFarsi: "نام (فارسی)",
         nameEnglish: "نام (انگلیسی)",
         status: "وضعیت",
@@ -270,20 +270,20 @@ const translations = {
         attendanceRefreshed: "حضور و غیاب بروزرسانی شد",
 
         // Students Tab
-        searchStudents: "جستجوی دانش‌آموزان...",
-        addStudent: "افزودن دانش‌آموز",
+        searchStudents: "جستجوی دانشجو...",
+        addStudent: "افزودن دانشجو",
         bulkImport: "ورود گروهی",
-        noStudentsAdded: "دانش‌آموزی اضافه نشده",
-        addStudentsPrompt: "برای شروع ثبت حضور و غیاب دانش‌آموزان را اضافه کنید",
-        studentAdded: "دانش‌آموز با موفقیت اضافه شد!",
-        studentUpdated: "دانش‌آموز با موفقیت بروزرسانی شد!",
-        studentDeleted: "دانش‌آموز حذف شد",
-        confirmDeleteStudent: "آیا از حذف این دانش‌آموز مطمئن هستید؟",
+        noStudentsAdded: "دانشجویی اضافه نشده",
+        addStudentsPrompt: "برای شروع ثبت حضور و غیاب دانشجویان را اضافه کنید",
+        studentAdded: "دانشجو با موفقیت اضافه شد!",
+        studentUpdated: "دانشجو با موفقیت بروزرسانی شد!",
+        studentDeleted: "دانشجو حذف شد",
+        confirmDeleteStudent: "آیا از حذف این دانشجو مطمئن هستید؟",
 
         // Session History Tab
         date: "تاریخ",
         closed: "بسته شده",
-        students: "دانش‌آموز",
+        students: "دانشجو",
         view: "مشاهده",
         noSessionHistory: "تاریخچه جلسه‌ای وجود ندارد",
         pastSessionsPrompt: "جلسات گذشته اینجا نمایش داده می‌شوند",
@@ -293,26 +293,26 @@ const translations = {
         // Modals
         createSession: "ایجاد جلسه",
         sessionNamePlaceholder: "مثال: کلاس ریاضی - هفته ۵",
-        passkeyForStudents: "کلید عبور برای دانش‌آموزان",
+        passkeyForStudents: "کلید عبور برای دانشجویان",
         passkeyPlaceholder: "مثال: MATH2024",
-        passkeyHint: "این کلید عبور برای ثبت حضور به دانش‌آموزان داده می‌شود",
+        passkeyHint: "این کلید عبور برای ثبت حضور به دانشجویان داده می‌شود",
         generateRandom: "تولید تصادفی",
         sessionCreated: "جلسه با موفقیت ایجاد شد!",
         passkeyInUse: "این کلید عبور قبلا توسط جلسه دیگری استفاده شده است",
 
-        addStudentTitle: "افزودن دانش‌آموز",
-        editStudentTitle: "ویرایش دانش‌آموز",
-        studentNameRequired: "نام دانش‌آموز الزامی است",
+        addStudentTitle: "افزودن دانشجو",
+        editStudentTitle: "ویرایش دانشجو",
+        studentNameRequired: "نام دانشجو الزامی است",
         nameEnglishLabel: "نام (انگلیسی)",
         nameFarsiLabel: "نام (فارسی) - اختیاری",
-        enterStudentName: "نام دانش‌آموز را وارد کنید",
+        enterStudentName: "نام دانشجو را وارد کنید",
 
-        bulkImportTitle: "ورود گروهی دانش‌آموزان",
-        bulkImportInstructions: "نام دانش‌آموزان را وارد کنید (هر خط یک نام)",
+        bulkImportTitle: "ورود گروهی دانشجویان",
+        bulkImportInstructions: "نام دانشجویان را وارد کنید (هر خط یک نام)",
         bulkImportPlaceholder: "John Doe\nJane Smith\nعلی رضایی | Ali Rezaei\nسارا احمدی | Sara Ahmadi",
         bulkImportHint: "فرمت: نام انگلیسی | نام فارسی (نام فارسی اختیاری است)",
-        importStudents: "ورود دانش‌آموزان",
-        studentsImported: "دانش‌آموز با موفقیت اضافه شد",
+        importStudents: "ورود دانشجویان",
+        studentsImported: "دانشجو با موفقیت اضافه شد",
 
         sessionDetails: "جزئیات جلسه",
         ipAddress: "آدرس IP",
