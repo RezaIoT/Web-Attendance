@@ -12,6 +12,7 @@ const sessionRoutes = require('./routes/sessions');
 const attendanceRoutes = require('./routes/attendance');
 
 const app = express();
+app.set('trust proxy', true);
 const PORT = process.env.PORT || 3300;
 
 // Middleware
