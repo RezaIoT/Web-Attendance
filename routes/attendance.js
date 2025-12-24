@@ -101,8 +101,8 @@ router.post('/register', (req, res) => {
             const existingName = existingStudent ? existingStudent.name : 'another student';
 
             return res.status(403).json({
-                error: `This device/IP has already been used to register attendance for ${existingName}. Each device can only register once per session.`,
-                error_fa: `این دستگاه/آی‌پی قبلاً برای ثبت حضور ${existingStudent ? existingStudent.name_fa || existingStudent.name : 'دانشجوی دیگر'} استفاده شده است. هر دستگاه فقط یک بار در هر جلسه می‌تواند ثبت حضور کند.`,
+                error: `This device has already been used to register attendance for ${existingName}. Each device can only register once per session.`,
+                error_fa: `این دستگاه قبلاً برای ثبت حضور ${existingStudent ? existingStudent.name_fa || existingStudent.name : 'دانشجوی دیگر'} استفاده شده است. هر دستگاه فقط یک بار در هر جلسه می‌تواند ثبت حضور کند.`,
                 ip_already_used: true,
                 registered_student: existingName
             });
