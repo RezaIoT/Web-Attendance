@@ -164,7 +164,19 @@ const translations = {
         // Language
         language: "Language",
         english: "English",
-        farsi: "فارسی"
+        farsi: "فارسی",
+
+        // Password Change
+        changePassword: "Password",
+        changePasswordTitle: "Change Password",
+        currentPassword: "Current Password",
+        newPassword: "New Password",
+        confirmPassword: "Confirm New Password",
+        passwordMinLength: "Minimum 6 characters",
+        updatePassword: "Update Password",
+        passwordUpdated: "Password updated successfully!",
+        passwordsDoNotMatch: "New passwords do not match",
+        currentPasswordIncorrect: "Current password is incorrect"
     },
 
     fa: {
@@ -330,7 +342,19 @@ const translations = {
         // Language
         language: "زبان",
         english: "English",
-        farsi: "فارسی"
+        farsi: "فارسی",
+
+        // Password Change
+        changePassword: "رمز عبور",
+        changePasswordTitle: "تغییر رمز عبور",
+        currentPassword: "رمز عبور فعلی",
+        newPassword: "رمز عبور جدید",
+        confirmPassword: "تکرار رمز عبور جدید",
+        passwordMinLength: "حداقل ۶ کاراکتر",
+        updatePassword: "بروزرسانی رمز عبور",
+        passwordUpdated: "رمز عبور با موفقیت تغییر کرد!",
+        passwordsDoNotMatch: "رمزهای عبور جدید مطابقت ندارند",
+        currentPasswordIncorrect: "رمز عبور فعلی صحیح نیست"
     }
 };
 

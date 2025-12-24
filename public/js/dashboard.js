@@ -668,6 +668,67 @@ async function logout() {
     }
 }
 
+function openChangePasswordModal() {
+    document.getElementById('changePasswordForm').reset();
+    document.getElementById('passwordError').classList.add('hidden');
+    openModal('changePasswordModal');
+}
+
+// Setup change password form
+document.addEventListener('DOMContentLoaded', () => {
+    const changePasswordForm = document.getElementById('changePasswordForm');
+    if (changePasswordForm) {
+        changePasswordForm.addEventListener('submit', changePassword);
+    }
+});
+
+async function changePassword(e) {
+    e.preventDefault();
+
+    const currentPassword = document.getElementById('currentPassword').value;
+    const newPassword = document.getElementById('newPassword').value;
+    const confirmPassword = document.getElementById('confirmPassword').value;
+    const passwordError = document.getElementById('passwordError');
+
+    // Validate passwords match
+    if (newPassword !== confirmPassword) {
+        passwordError.textContent = t('passwordsDoNotMatch');
+        passwordError.classList.remove('hidden');
+        return;
+    }
+
+    // Validate minimum length
+    if (newPassword.length < 6) {
+        passwordError.textContent = t('passwordMinLength');
+        passwordError.classList.remove('hidden');
+        return;
+    }
+
+    passwordError.classList.add('hidden');
+
+    try {
+        const response = await fetch('/api/auth/change-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            showToast(t('passwordUpdated'), 'success');
+            closeModal('changePasswordModal');
+            document.getElementById('changePasswordForm').reset();
+        } else {
+            passwordError.textContent = data.error || t('failedToUpdate');
+            passwordError.classList.remove('hidden');
+        }
+    } catch (err) {
+        passwordError.textContent = t('connectionError');
+        passwordError.classList.remove('hidden');
+    }
+}
+
 // ========================================
 // Modal Functions
 // ========================================
