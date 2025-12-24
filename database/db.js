@@ -140,13 +140,23 @@ function deleteAllStudents(teacherId) {
 
 // Session functions
 function createSession(teacherId, name, passkey) {
-    // Deactivate all other sessions first
-    getDb().prepare('UPDATE class_sessions SET is_active = 0 WHERE teacher_id = ?').run(teacherId);
+    // Allow multiple active sessions (no longer deactivating others)
     return getDb().prepare('INSERT INTO class_sessions (teacher_id, name, passkey, is_active) VALUES (?, ?, ?, 1)').run(teacherId, name, passkey);
 }
 
 function getActiveSession(teacherId) {
-    return getDb().prepare('SELECT * FROM class_sessions WHERE teacher_id = ? AND is_active = 1').get(teacherId);
+    // Returns the most recently created active session (for backward compatibility)
+    return getDb().prepare('SELECT * FROM class_sessions WHERE teacher_id = ? AND is_active = 1 ORDER BY created_at DESC LIMIT 1').get(teacherId);
+}
+
+function getActiveSessions(teacherId) {
+    // Returns all active sessions
+    return getDb().prepare('SELECT * FROM class_sessions WHERE teacher_id = ? AND is_active = 1 ORDER BY created_at DESC').all(teacherId);
+}
+
+function countActiveSessions(teacherId) {
+    const result = getDb().prepare('SELECT COUNT(*) as count FROM class_sessions WHERE teacher_id = ? AND is_active = 1').get(teacherId);
+    return result.count;
 }
 
 function getAllSessions(teacherId) {
@@ -165,19 +175,13 @@ function getSessionById(id) {
 
 function updateSession(id, teacherId, updates) {
     const { name, passkey, is_active } = updates;
-    if (is_active === 1) {
-        // Deactivate all other sessions first
-        getDb().prepare('UPDATE class_sessions SET is_active = 0 WHERE teacher_id = ?').run(teacherId);
-    }
+    // Allow multiple active sessions (no longer deactivating others)
     return getDb().prepare('UPDATE class_sessions SET name = COALESCE(?, name), passkey = COALESCE(?, passkey), is_active = COALESCE(?, is_active) WHERE id = ? AND teacher_id = ?')
         .run(name, passkey, is_active, id, teacherId);
 }
 
 function toggleSession(id, teacherId, isActive) {
-    if (isActive) {
-        // Deactivate all other sessions first
-        getDb().prepare('UPDATE class_sessions SET is_active = 0 WHERE teacher_id = ?').run(teacherId);
-    }
+    // Allow multiple active sessions (no longer deactivating others)
     return getDb().prepare('UPDATE class_sessions SET is_active = ?, closed_at = CASE WHEN ? = 0 THEN CURRENT_TIMESTAMP ELSE NULL END WHERE id = ? AND teacher_id = ?')
         .run(isActive ? 1 : 0, isActive ? 1 : 0, id, teacherId);
 }
@@ -257,6 +261,8 @@ module.exports = {
     deleteAllStudents,
     createSession,
     getActiveSession,
+    getActiveSessions,
+    countActiveSessions,
     getAllSessions,
     getSessionById,
     updateSession,

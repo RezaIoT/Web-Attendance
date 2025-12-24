@@ -1,6 +1,7 @@
 // Global state
 let currentUser = null;
-let activeSession = null;
+let activeSession = null;      // Currently selected/viewed active session
+let activeSessions = [];       // All active sessions
 let allStudents = [];
 let allSessions = [];
 let currentDetailsSessionId = null;
@@ -123,7 +124,12 @@ function setupTabs() {
 async function loadActiveSession() {
     try {
         const response = await fetch('/api/sessions/active');
-        activeSession = await response.json();
+        const data = await response.json();
+
+        // Handle multiple active sessions
+        activeSessions = data.sessions || [];
+        activeSession = data.current || (activeSessions.length > 0 ? activeSessions[0] : null);
+
         updateSessionUI();
 
         if (activeSession) {
@@ -141,6 +147,15 @@ function updateSessionUI() {
     const noSessionAttendance = document.getElementById('noSessionAttendance');
     const attendanceContent = document.getElementById('attendanceContent');
 
+    // Update active session count display
+    const activeCountEl = document.getElementById('activeSessionCount');
+    if (activeCountEl) {
+        activeCountEl.textContent = activeSessions.length;
+    }
+
+    // Update session selector dropdown if multiple sessions
+    updateSessionSelector();
+
     if (activeSession) {
         noSession.classList.add('hidden');
         sessionContent.classList.remove('hidden');
@@ -152,8 +167,13 @@ function updateSessionUI() {
         document.getElementById('sessionToggle').checked = isActive;
         document.getElementById('toggleLabel').textContent = isActive ? t('active') : t('inactive');
 
+        // Show count of active sessions
+        const activeCountBadge = activeSessions.length > 1
+            ? ` <span class="badge badge-primary">${activeSessions.length} ${t('active')}</span>`
+            : '';
+
         sessionStatus.innerHTML = isActive
-            ? `<span class="session-active"><span class="pulse-dot"></span> ${t('active')}</span>`
+            ? `<span class="session-active"><span class="pulse-dot"></span> ${t('active')}</span>${activeCountBadge}`
             : `<span class="badge badge-warning">${t('paused')}</span>`;
 
         noSessionAttendance.classList.add('hidden');
@@ -165,6 +185,51 @@ function updateSessionUI() {
 
         noSessionAttendance.classList.remove('hidden');
         attendanceContent.classList.add('hidden');
+    }
+}
+
+function updateSessionSelector() {
+    // Create or update session selector if multiple active sessions
+    let selector = document.getElementById('activeSessionSelector');
+
+    if (activeSessions.length > 1) {
+        if (!selector) {
+            // Create selector
+            const container = document.getElementById('activeSessionContent');
+            const nameEl = document.getElementById('activeSessionName');
+            if (nameEl && container) {
+                selector = document.createElement('select');
+                selector.id = 'activeSessionSelector';
+                selector.className = 'form-control';
+                selector.style.cssText = 'margin-bottom: 1rem; font-weight: 600;';
+                selector.addEventListener('change', switchActiveSession);
+                nameEl.parentNode.insertBefore(selector, nameEl);
+                nameEl.style.display = 'none';
+            }
+        }
+
+        if (selector) {
+            selector.innerHTML = activeSessions.map(s =>
+                `<option value="${s.id}" ${s.id === activeSession?.id ? 'selected' : ''}>${escapeHtml(s.name)} (${s.passkey})</option>`
+            ).join('');
+            selector.style.display = 'block';
+        }
+    } else if (selector) {
+        selector.style.display = 'none';
+        const nameEl = document.getElementById('activeSessionName');
+        if (nameEl) nameEl.style.display = 'block';
+    }
+}
+
+async function switchActiveSession(e) {
+    const sessionId = parseInt(e.target.value);
+    activeSession = activeSessions.find(s => s.id === sessionId);
+
+    if (activeSession) {
+        document.getElementById('activeSessionName').textContent = activeSession.name;
+        document.getElementById('activePasskey').textContent = activeSession.passkey;
+        document.getElementById('sessionToggle').checked = activeSession.is_active === 1;
+        await loadSessionAttendance(activeSession.id);
     }
 }
 
@@ -210,7 +275,9 @@ async function toggleSession(e) {
 
         if (response.ok) {
             activeSession.is_active = isActive ? 1 : 0;
-            updateSessionUI();
+            // Reload active sessions list to update the count
+            await loadActiveSession();
+            await loadSessions();
             showToast(isActive ? t('sessionActivated') : t('sessionPaused'), 'success');
         }
     } catch (err) {

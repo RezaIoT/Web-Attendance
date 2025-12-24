@@ -14,13 +14,19 @@ router.get('/', isAuthenticated, (req, res) => {
     }
 });
 
-// Get active session
+// Get active sessions (supports multiple active sessions)
 router.get('/active', isAuthenticated, (req, res) => {
     try {
-        const session = db.getActiveSession(req.session.teacherId);
-        res.json(session || null);
+        const sessions = db.getActiveSessions(req.session.teacherId);
+        // Return array of active sessions, or single session for backward compatibility
+        res.json({
+            sessions: sessions,
+            count: sessions.length,
+            // For backward compatibility, also return the most recent one
+            current: sessions.length > 0 ? sessions[0] : null
+        });
     } catch (err) {
-        res.status(500).json({ error: 'Failed to fetch active session' });
+        res.status(500).json({ error: 'Failed to fetch active sessions' });
     }
 });
 
