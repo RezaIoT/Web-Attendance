@@ -1352,3 +1352,102 @@ body.rtl {
         align-items: flex-end;
     }
 }
+
+/* ========================================
+   Module Cards
+   ======================================== */
+
+.modules-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.module-card {
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    overflow: hidden;
+    transition: var(--transition);
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.module-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+    border-color: var(--primary-light);
+}
+
+.module-card-header {
+    padding: 1.25rem;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+}
+
+.module-card-header h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: 1.125rem;
+    font-weight: 600;
+}
+
+.module-card-header .module-code {
+    font-size: 0.875rem;
+    opacity: 0.9;
+}
+
+.module-card-body {
+    padding: 1.25rem;
+}
+
+.module-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.module-stat {
+    text-align: center;
+    padding: 0.75rem;
+    background: var(--gray-50);
+    border-radius: var(--radius);
+}
+
+.module-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.module-stat-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.module-card-footer {
+    padding: 0.75rem 1.25rem;
+    background: var(--gray-50);
+    border-top: 1px solid var(--gray-200);
+    font-size: 0.875rem;
+    color: var(--gray-600);
+}
+
+/* Module tab content */
+.module-tab-content {
+    display: none;
+}
+
+.module-tab-content.active {
+    display: block;
+}
+
+/* RTL support for modules */
+.rtl .module-card-header {
+    text-align: right;
+}
+
+.rtl .module-stat {
+    text-align: center;
+}

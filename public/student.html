@@ -43,6 +43,39 @@
             border-color: var(--primary);
             color: white;
         }
+        .module-info {
+            display: flex;
+            gap: 0.5rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 0.5rem;
+        }
+        .module-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: var(--primary-light);
+            color: var(--primary);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .week-badge {
+            display: inline-flex;
+            align-items: center;
+            background: var(--success-light, #dcfce7);
+            color: var(--success, #16a34a);
+            padding: 0.25rem 0.75rem;
+            border-radius: 999px;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+        .student-id-display {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+            margin-top: 0.125rem;
+        }
     </style>
 </head>
 <body>
@@ -95,6 +128,10 @@
         <div id="attendanceSection" class="student-card hidden">
             <div class="student-header">
                 <h1 id="sessionName">Class Session</h1>
+                <div id="moduleInfo" class="module-info hidden">
+                    <span id="moduleName" class="module-badge"></span>
+                    <span id="weekBadge" class="week-badge hidden"></span>
+                </div>
                 <p data-i18n="selectYourName">Select your name and register your attendance</p>
             </div>
 
@@ -230,6 +267,29 @@
                     allStudents = data.students;
 
                     document.getElementById('sessionName').textContent = data.session.name;
+
+                    // Show module info if available
+                    const moduleInfo = document.getElementById('moduleInfo');
+                    const moduleName = document.getElementById('moduleName');
+                    const weekBadge = document.getElementById('weekBadge');
+
+                    if (data.session.module_name) {
+                        const moduleText = data.session.module_code
+                            ? `${data.session.module_name} (${data.session.module_code})`
+                            : data.session.module_name;
+                        moduleName.textContent = moduleText;
+                        moduleInfo.classList.remove('hidden');
+
+                        if (data.session.week_number) {
+                            weekBadge.textContent = `${t('week')} ${data.session.week_number}`;
+                            weekBadge.classList.remove('hidden');
+                        } else {
+                            weekBadge.classList.add('hidden');
+                        }
+                    } else {
+                        moduleInfo.classList.add('hidden');
+                    }
+
                     renderStudents(allStudents);
 
                     passkeySection.classList.add('hidden');
@@ -266,6 +326,7 @@
                     <div class="student-name">
                         <div class="student-name-en">${escapeHtml(student.name)}</div>
                         ${student.name_fa ? `<div class="student-name-fa">${escapeHtml(student.name_fa)}</div>` : ''}
+                        ${student.student_id ? `<div class="student-id-display">${escapeHtml(student.student_id)}</div>` : ''}
                     </div>
                 </label>
             `).join('');
@@ -286,7 +347,8 @@
             const query = e.target.value.toLowerCase();
             const filtered = allStudents.filter(s =>
                 s.name.toLowerCase().includes(query) ||
-                (s.name_fa && s.name_fa.includes(query))
+                (s.name_fa && s.name_fa.includes(query)) ||
+                (s.student_id && s.student_id.toLowerCase().includes(query))
             );
             renderStudents(filtered);
             selectedStudentId = null;

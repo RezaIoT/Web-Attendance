@@ -2,9 +2,12 @@
 let currentUser = null;
 let activeSession = null;      // Currently selected/viewed active session
 let activeSessions = [];       // All active sessions
+let allModules = [];           // All modules
 let allStudents = [];
 let allSessions = [];
 let currentDetailsSessionId = null;
+let currentModuleId = null;    // Currently viewed module
+let currentModuleData = null;  // Current module full data
 let refreshInterval = null;
 
 // ========================================
@@ -70,8 +73,8 @@ async function checkAuth() {
 
         // Load initial data
         await Promise.all([
+            loadModules(),
             loadActiveSession(),
-            loadStudents(),
             loadSessions()
         ]);
 
@@ -96,25 +99,316 @@ function setupEventListeners() {
     // Session toggle
     document.getElementById('sessionToggle').addEventListener('change', toggleSession);
 
-    // Student search
-    document.getElementById('searchStudentInput').addEventListener('input', filterStudents);
+    // Module forms
+    document.getElementById('addModuleForm').addEventListener('submit', createModule);
+    document.getElementById('moduleSessionForm').addEventListener('submit', createModuleSession);
+
+    // Module detail tabs
+    document.querySelectorAll('[data-module-tab]').forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabId = tab.dataset.moduleTab;
+            document.querySelectorAll('[data-module-tab]').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.module-tab-content').forEach(tc => tc.classList.remove('active'));
+            tab.classList.add('active');
+            document.getElementById(`module${tabId.charAt(0).toUpperCase() + tabId.slice(1)}Tab`).classList.add('active');
+        });
+    });
 }
 
 function setupTabs() {
-    const tabs = document.querySelectorAll('.tab');
+    const tabs = document.querySelectorAll('.tabs > .tab');
     const tabContents = document.querySelectorAll('.tab-content');
 
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const tabId = tab.dataset.tab;
+            if (!tabId) return; // Skip module detail tabs
 
             tabs.forEach(t => t.classList.remove('active'));
             tabContents.forEach(tc => tc.classList.remove('active'));
 
             tab.classList.add('active');
-            document.getElementById(`${tabId}Tab`).classList.add('active');
+            const tabContent = document.getElementById(`${tabId}Tab`);
+            if (tabContent) tabContent.classList.add('active');
         });
     });
+}
+
+// ========================================
+// Module Management
+// ========================================
+
+async function loadModules() {
+    try {
+        const response = await fetch('/api/modules');
+        allModules = await response.json();
+        renderModulesGrid();
+        updateModuleDropdowns();
+    } catch (err) {
+        console.error('Failed to load modules:', err);
+    }
+}
+
+function renderModulesGrid() {
+    const grid = document.getElementById('modulesList');
+    const noModules = document.getElementById('noModules');
+    const content = document.getElementById('modulesContent');
+
+    if (allModules.length === 0) {
+        noModules.classList.remove('hidden');
+        content.classList.add('hidden');
+        return;
+    }
+
+    noModules.classList.add('hidden');
+    content.classList.remove('hidden');
+
+    grid.innerHTML = allModules.map(m => `
+        <div class="module-card" onclick="openModuleDetails(${m.id})">
+            <div class="module-card-header">
+                <h4>${escapeHtml(m.name)}</h4>
+                ${m.code ? `<span class="module-code">${escapeHtml(m.code)}</span>` : ''}
+            </div>
+            <div class="module-card-body">
+                <div class="module-stats">
+                    <div class="module-stat">
+                        <div class="module-stat-value">${m.student_count || 0}</div>
+                        <div class="module-stat-label">${t('students')}</div>
+                    </div>
+                    <div class="module-stat">
+                        <div class="module-stat-value">${m.session_count || 0}</div>
+                        <div class="module-stat-label">${t('sessions')}</div>
+                    </div>
+                </div>
+            </div>
+            ${m.semester ? `<div class="module-card-footer">${escapeHtml(m.semester)}</div>` : ''}
+        </div>
+    `).join('');
+}
+
+function updateModuleDropdowns() {
+    const sessionModuleSelect = document.getElementById('sessionModule');
+    if (sessionModuleSelect) {
+        const currentValue = sessionModuleSelect.value;
+        sessionModuleSelect.innerHTML = `<option value="">${t('noModule') || '-- No Module --'}</option>` +
+            allModules.map(m => `<option value="${m.id}">${escapeHtml(m.name)} ${m.code ? `(${escapeHtml(m.code)})` : ''}</option>`).join('');
+        sessionModuleSelect.value = currentValue;
+    }
+}
+
+function openAddModuleModal() {
+    document.getElementById('addModuleForm').reset();
+    openModal('addModuleModal');
+}
+
+async function createModule(e) {
+    e.preventDefault();
+
+    const name = document.getElementById('moduleName').value.trim();
+    const code = document.getElementById('moduleCode').value.trim();
+    const semester = document.getElementById('moduleSemester').value.trim();
+    const totalClasses = document.getElementById('moduleTotalClasses').value;
+
+    try {
+        const response = await fetch('/api/modules', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, code, semester, total_classes: parseInt(totalClasses) })
+        });
+
+        if (response.ok) {
+            closeModal('addModuleModal');
+            showToast(t('moduleCreated') || 'Module created successfully!', 'success');
+            await loadModules();
+        } else {
+            const data = await response.json();
+            showToast(data.error || t('failedToCreate'), 'error');
+        }
+    } catch (err) {
+        showToast(t('connectionError'), 'error');
+    }
+}
+
+async function openModuleDetails(moduleId) {
+    try {
+        const response = await fetch(`/api/modules/${moduleId}`);
+        const data = await response.json();
+
+        currentModuleId = moduleId;
+        currentModuleData = data;
+
+        document.getElementById('currentModuleId').value = moduleId;
+        document.getElementById('moduleDetailsTitle').textContent = data.module.name;
+        document.getElementById('moduleInfoCode').textContent = data.module.code || '-';
+        document.getElementById('moduleInfoSemester').textContent = data.module.semester || '-';
+        document.getElementById('moduleInfoStudents').textContent = data.students.length;
+        document.getElementById('moduleInfoSessions').textContent = data.sessions.length;
+
+        renderModuleStudents(data.students);
+        renderModuleSessions(data.sessions);
+
+        openModal('moduleDetailsModal');
+    } catch (err) {
+        showToast(t('failedToLoad'), 'error');
+    }
+}
+
+function renderModuleStudents(students) {
+    const tbody = document.getElementById('moduleStudentsBody');
+    if (students.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="text-center text-muted">${t('noStudentsAdded')}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = students.map((s, i) => `
+        <tr>
+            <td>${i + 1}</td>
+            <td>${escapeHtml(s.student_id) || '-'}</td>
+            <td>${escapeHtml(s.name)}</td>
+            <td>${escapeHtml(s.name_fa) || '-'}</td>
+            <td>
+                <button class="btn btn-danger btn-sm" onclick="deleteModuleStudent(${s.id})">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                </button>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function renderModuleSessions(sessions) {
+    const tbody = document.getElementById('moduleSessionsBody');
+    if (sessions.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted">${t('noSessionHistory')}</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = sessions.map(s => {
+        const status = s.is_active ?
+            `<span class="badge badge-success">${t('active')}</span>` :
+            `<span class="badge badge-secondary">${t('closed')}</span>`;
+
+        return `
+            <tr>
+                <td>${s.week_number || '-'}</td>
+                <td>${escapeHtml(s.name)}</td>
+                <td><code>${escapeHtml(s.passkey)}</code></td>
+                <td>${status}</td>
+                <td>${s.attendance_count || 0}</td>
+                <td>
+                    <button class="btn btn-sm ${s.is_active ? 'btn-warning' : 'btn-success'}" onclick="toggleModuleSession(${s.id}, ${!s.is_active})">
+                        ${s.is_active ? t('pause') || 'Pause' : t('activate') || 'Activate'}
+                    </button>
+                </td>
+            </tr>
+        `;
+    }).join('');
+}
+
+function openModuleAddStudentModal() {
+    document.getElementById('addStudentForm').reset();
+    openModal('addStudentModal');
+}
+
+function openModuleBulkImportModal() {
+    document.getElementById('bulkImportForm').reset();
+    openModal('bulkImportModal');
+}
+
+function openModuleSessionModal() {
+    document.getElementById('moduleSessionForm').reset();
+    openModal('moduleSessionModal');
+}
+
+function generateModulePasskey() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let passkey = '';
+    for (let i = 0; i < 6; i++) {
+        passkey += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    document.getElementById('moduleSessionPasskey').value = passkey;
+}
+
+async function createModuleSession(e) {
+    e.preventDefault();
+
+    const weekNumber = document.getElementById('moduleSessionWeek').value;
+    const name = document.getElementById('moduleSessionName').value.trim();
+    const passkey = document.getElementById('moduleSessionPasskey').value.trim();
+
+    try {
+        const response = await fetch(`/api/modules/${currentModuleId}/sessions`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, passkey, week_number: weekNumber ? parseInt(weekNumber) : null })
+        });
+
+        if (response.ok) {
+            closeModal('moduleSessionModal');
+            showToast(t('sessionCreated'), 'success');
+            await openModuleDetails(currentModuleId);
+            await loadActiveSession();
+            await loadSessions();
+        } else {
+            const data = await response.json();
+            showToast(data.error || t('failedToCreate'), 'error');
+        }
+    } catch (err) {
+        showToast(t('connectionError'), 'error');
+    }
+}
+
+async function toggleModuleSession(sessionId, isActive) {
+    try {
+        const response = await fetch(`/api/sessions/${sessionId}/toggle`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: isActive })
+        });
+
+        if (response.ok) {
+            await openModuleDetails(currentModuleId);
+            await loadActiveSession();
+            await loadSessions();
+        }
+    } catch (err) {
+        showToast(t('failedToUpdate'), 'error');
+    }
+}
+
+async function deleteModuleStudent(studentId) {
+    if (!confirm(t('confirmDeleteStudent'))) return;
+
+    try {
+        const response = await fetch(`/api/students/${studentId}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            showToast(t('studentDeleted'), 'success');
+            await openModuleDetails(currentModuleId);
+        }
+    } catch (err) {
+        showToast(t('failedToDelete'), 'error');
+    }
+}
+
+async function deleteCurrentModule() {
+    if (!confirm(t('confirmDeleteModule') || 'Are you sure you want to delete this module? All students and sessions will be lost.')) return;
+
+    try {
+        const response = await fetch(`/api/modules/${currentModuleId}`, {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            closeModal('moduleDetailsModal');
+            showToast(t('moduleDeleted') || 'Module deleted', 'success');
+            await loadModules();
+            await loadSessions();
+        }
+    } catch (err) {
+        showToast(t('failedToDelete'), 'error');
+    }
 }
 
 // ========================================
@@ -236,6 +530,7 @@ async function switchActiveSession(e) {
 async function createSession(e) {
     e.preventDefault();
 
+    const moduleId = document.getElementById('sessionModule').value;
     const name = document.getElementById('sessionName').value.trim();
     const passkey = document.getElementById('sessionPasskey').value.trim();
 
@@ -243,7 +538,11 @@ async function createSession(e) {
         const response = await fetch('/api/sessions', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, passkey })
+            body: JSON.stringify({
+                name,
+                passkey,
+                module_id: moduleId ? parseInt(moduleId) : null
+            })
         });
 
         const data = await response.json();
@@ -419,25 +718,49 @@ async function addStudent(e) {
     const name = document.getElementById('studentName').value.trim();
     const name_fa = document.getElementById('studentNameFa').value.trim();
 
-    try {
-        const response = await fetch('/api/students', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name, name_fa })
-        });
+    // Check if we're adding to a module
+    if (currentModuleId) {
+        try {
+            const response = await fetch(`/api/modules/${currentModuleId}/students`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, name_fa })
+            });
 
-        const data = await response.json();
+            const data = await response.json();
 
-        if (response.ok && data.success) {
-            showToast(t('studentAdded'), 'success');
-            closeModal('addStudentModal');
-            document.getElementById('addStudentForm').reset();
-            await loadStudents();
-        } else {
-            showToast(data.error || t('failedToCreate'), 'error');
+            if (response.ok && data.success) {
+                showToast(t('studentAdded'), 'success');
+                closeModal('addStudentModal');
+                document.getElementById('addStudentForm').reset();
+                await openModuleDetails(currentModuleId);
+            } else {
+                showToast(data.error || t('failedToCreate'), 'error');
+            }
+        } catch (err) {
+            showToast(t('connectionError'), 'error');
         }
-    } catch (err) {
-        showToast(t('connectionError'), 'error');
+    } else {
+        try {
+            const response = await fetch('/api/students', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, name_fa })
+            });
+
+            const data = await response.json();
+
+            if (response.ok && data.success) {
+                showToast(t('studentAdded'), 'success');
+                closeModal('addStudentModal');
+                document.getElementById('addStudentForm').reset();
+                await loadStudents();
+            } else {
+                showToast(data.error || t('failedToCreate'), 'error');
+            }
+        } catch (err) {
+            showToast(t('connectionError'), 'error');
+        }
     }
 }
 
@@ -498,7 +821,8 @@ async function bulkImportStudents(e) {
         const parts = line.split('|').map(p => p.trim());
         return {
             name: parts[0],
-            name_fa: parts[1] || null
+            name_fa: parts[1] || null,
+            student_id: parts[2] || null
         };
     }).filter(s => s.name);
 
@@ -508,11 +832,22 @@ async function bulkImportStudents(e) {
     }
 
     try {
-        const response = await fetch('/api/students/bulk', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ students })
-        });
+        let response;
+        if (currentModuleId) {
+            // Import students to specific module
+            response = await fetch(`/api/modules/${currentModuleId}/students/bulk`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ students })
+            });
+        } else {
+            // Import students to teacher (legacy)
+            response = await fetch('/api/students/bulk', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ students })
+            });
+        }
 
         const data = await response.json();
 
@@ -520,7 +855,11 @@ async function bulkImportStudents(e) {
             showToast(`${students.length} ${t('studentsImported')}`, 'success');
             closeModal('bulkImportModal');
             document.getElementById('bulkImportForm').reset();
-            await loadStudents();
+            if (currentModuleId) {
+                await openModuleDetails(currentModuleId);
+            } else {
+                await loadStudents();
+            }
         } else {
             showToast(data.error || t('failedToCreate'), 'error');
         }
@@ -564,9 +903,13 @@ function renderSessionsTable(sessions) {
         const statusBadge = session.is_active
             ? `<span class="badge badge-success">${t('active')}</span>`
             : `<span class="badge badge-secondary">${t('closed')}</span>`;
+        const moduleName = session.module_name
+            ? `${escapeHtml(session.module_name)}${session.module_code ? ` (${escapeHtml(session.module_code)})` : ''}`
+            : '-';
 
         return `
             <tr>
+                <td>${moduleName}</td>
                 <td>${escapeHtml(session.name)}</td>
                 <td>${date}</td>
                 <td>${statusBadge}</td>
