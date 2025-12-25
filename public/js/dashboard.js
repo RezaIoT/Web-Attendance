@@ -144,6 +144,10 @@ async function loadModules() {
         allModules = await response.json();
         renderModulesGrid();
         updateModuleDropdowns();
+
+        // Update total students count from all modules
+        const totalStudents = allModules.reduce((sum, m) => sum + (m.student_count || 0), 0);
+        document.getElementById('totalStudents').textContent = totalStudents;
     } catch (err) {
         console.error('Failed to load modules:', err);
     }
