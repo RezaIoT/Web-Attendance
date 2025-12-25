@@ -41,7 +41,14 @@ router.get('/:id', isAuthenticated, (req, res) => {
         }
 
         const attendance = db.getSessionAttendance(parseInt(id));
-        const students = db.getStudentsForSession(req.session.teacherId, parseInt(id));
+
+        // Get students based on module or teacher
+        let students;
+        if (session.module_id) {
+            students = db.getStudentsForSession(session.module_id, parseInt(id));
+        } else {
+            students = db.getStudentsForSessionByTeacher(req.session.teacherId, parseInt(id));
+        }
 
         res.json({
             session,
@@ -54,13 +61,14 @@ router.get('/:id', isAuthenticated, (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Failed to fetch session:', err);
         res.status(500).json({ error: 'Failed to fetch session details' });
     }
 });
 
 // Create a new session
 router.post('/', isAuthenticated, (req, res) => {
-    const { name, passkey } = req.body;
+    const { name, passkey, module_id, week_number } = req.body;
 
     if (!name || name.trim() === '') {
         return res.status(400).json({ error: 'Session name is required' });
@@ -76,18 +84,35 @@ router.post('/', isAuthenticated, (req, res) => {
         return res.status(400).json({ error: 'This passkey is already in use by another active session' });
     }
 
+    // If module_id provided, verify it belongs to teacher
+    if (module_id) {
+        const module = db.getModuleById(parseInt(module_id));
+        if (!module || module.teacher_id !== req.session.teacherId) {
+            return res.status(400).json({ error: 'Invalid module' });
+        }
+    }
+
     try {
-        const result = db.createSession(req.session.teacherId, name.trim(), passkey.trim());
+        const result = db.createSession(
+            req.session.teacherId,
+            name.trim(),
+            passkey.trim(),
+            module_id ? parseInt(module_id) : null,
+            week_number || null
+        );
         res.json({
             success: true,
             session: {
                 id: result.lastInsertRowid,
                 name: name.trim(),
                 passkey: passkey.trim(),
+                module_id: module_id ? parseInt(module_id) : null,
+                week_number: week_number || null,
                 is_active: 1
             }
         });
     } catch (err) {
+        console.error('Failed to create session:', err);
         res.status(500).json({ error: 'Failed to create session' });
     }
 });
@@ -95,7 +120,7 @@ router.post('/', isAuthenticated, (req, res) => {
 // Update session
 router.put('/:id', isAuthenticated, (req, res) => {
     const { id } = req.params;
-    const { name, passkey, is_active } = req.body;
+    const { name, passkey, is_active, week_number } = req.body;
 
     try {
         const session = db.getSessionById(parseInt(id));
@@ -111,7 +136,7 @@ router.put('/:id', isAuthenticated, (req, res) => {
             }
         }
 
-        db.updateSession(parseInt(id), req.session.teacherId, { name, passkey, is_active });
+        db.updateSession(parseInt(id), req.session.teacherId, { name, passkey, is_active, week_number });
         res.json({ success: true });
     } catch (err) {
         res.status(500).json({ error: 'Failed to update session' });

@@ -7,6 +7,7 @@ const { v4: uuidv4 } = require('uuid');
 
 const db = require('./database/db');
 const authRoutes = require('./routes/auth');
+const moduleRoutes = require('./routes/modules');
 const studentRoutes = require('./routes/students');
 const sessionRoutes = require('./routes/sessions');
 const attendanceRoutes = require('./routes/attendance');
@@ -48,6 +49,7 @@ app.use((req, res, next) => {
 
 // API Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/modules', moduleRoutes);
 app.use('/api/students', studentRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/attendance', attendanceRoutes);

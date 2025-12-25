@@ -18,20 +18,29 @@ router.post('/verify', (req, res) => {
             return res.status(404).json({ error: 'Invalid passkey or session is not active' });
         }
 
-        // Get students for this session
-        const students = db.getAllStudents(session.teacher_id);
+        // Get students for this session - from module if available, otherwise from teacher
+        let students;
+        if (session.module_id) {
+            students = db.getStudentsByModule(session.module_id);
+        } else {
+            students = db.getAllStudents(session.teacher_id);
+        }
 
         res.json({
             success: true,
             session: {
                 id: session.id,
                 name: session.name,
-                teacher_name: session.teacher_name
+                teacher_name: session.teacher_name,
+                module_name: session.module_name || null,
+                module_code: session.module_code || null,
+                week_number: session.week_number || null
             },
             students: students.map(s => ({
                 id: s.id,
                 name: s.name,
-                name_fa: s.name_fa
+                name_fa: s.name_fa,
+                student_id: s.student_id
             }))
         });
     } catch (err) {
@@ -70,8 +79,14 @@ router.post('/register', (req, res) => {
             return res.status(404).json({ error: 'Invalid passkey or session is not active' });
         }
 
-        // Check if student exists and belongs to this teacher
-        const students = db.getAllStudents(session.teacher_id);
+        // Get students from module if available, otherwise from teacher
+        let students;
+        if (session.module_id) {
+            students = db.getStudentsByModule(session.module_id);
+        } else {
+            students = db.getAllStudents(session.teacher_id);
+        }
+
         const student = students.find(s => s.id === parseInt(student_id));
         if (!student) {
             return res.status(404).json({ error: 'Student not found' });
@@ -148,7 +163,14 @@ router.get('/session/:sessionId', isAuthenticated, (req, res) => {
         }
 
         const attendance = db.getSessionAttendance(parseInt(sessionId));
-        const students = db.getStudentsForSession(req.session.teacherId, parseInt(sessionId));
+
+        // Get students from module if available, otherwise from teacher
+        let students;
+        if (session.module_id) {
+            students = db.getStudentsForSession(session.module_id, parseInt(sessionId));
+        } else {
+            students = db.getStudentsForSessionByTeacher(req.session.teacherId, parseInt(sessionId));
+        }
 
         res.json({
             session,
@@ -161,6 +183,7 @@ router.get('/session/:sessionId', isAuthenticated, (req, res) => {
             }
         });
     } catch (err) {
+        console.error('Error fetching attendance:', err);
         res.status(500).json({ error: 'Failed to fetch attendance' });
     }
 });
@@ -183,7 +206,13 @@ router.get('/export/:sessionId', isAuthenticated, (req, res) => {
             return res.status(404).json({ error: 'Session not found' });
         }
 
-        const students = db.getStudentsForSession(req.session.teacherId, parseInt(sessionId));
+        // Get students from module if available, otherwise from teacher
+        let students;
+        if (session.module_id) {
+            students = db.getStudentsForSession(session.module_id, parseInt(sessionId));
+        } else {
+            students = db.getStudentsForSessionByTeacher(req.session.teacherId, parseInt(sessionId));
+        }
         const attendance = db.getSessionAttendance(parseInt(sessionId));
 
         console.log('Found', students.length, 'students and', attendance.length, 'attendance records');
@@ -196,7 +225,7 @@ router.get('/export/:sessionId', isAuthenticated, (req, res) => {
 
         // Build CSV with BOM for UTF-8 support in Excel
         const BOM = '\uFEFF';
-        let csv = BOM + 'Name,Name (Farsi),Status,Time,IP Address,Device\n';
+        let csv = BOM + 'Student ID,Name,Name (Farsi),Status,Time,IP Address,Device\n';
 
         students.forEach(student => {
             const att = attendanceLookup[student.id];
@@ -206,7 +235,8 @@ router.get('/export/:sessionId', isAuthenticated, (req, res) => {
             const device = att ? (att.device_info || '').replace(/"/g, '""') : '';
             const name = (student.name || '').replace(/"/g, '""');
             const nameFa = (student.name_fa || '').replace(/"/g, '""');
-            csv += `"${name}","${nameFa}","${status}","${time}","${ip}","${device}"\n`;
+            const studentNumber = (student.student_id || '').replace(/"/g, '""');
+            csv += `"${studentNumber}","${name}","${nameFa}","${status}","${time}","${ip}","${device}"\n`;
         });
 
         // Sanitize filename - only allow ASCII characters for HTTP header compatibility
