@@ -107,10 +107,19 @@ function setupEventListeners() {
     document.querySelectorAll('[data-module-tab]').forEach(tab => {
         tab.addEventListener('click', () => {
             const tabId = tab.dataset.moduleTab;
+            // Update tab buttons
             document.querySelectorAll('[data-module-tab]').forEach(t => t.classList.remove('active'));
-            document.querySelectorAll('.module-tab-content').forEach(tc => tc.classList.remove('active'));
             tab.classList.add('active');
-            document.getElementById(`module${tabId.charAt(0).toUpperCase() + tabId.slice(1)}Tab`).classList.add('active');
+            // Update tab content - hide all, show selected
+            document.querySelectorAll('.module-tab-content').forEach(tc => {
+                tc.classList.remove('active');
+                tc.classList.add('hidden');
+            });
+            const targetTab = document.getElementById(`module${tabId.charAt(0).toUpperCase() + tabId.slice(1)}Tab`);
+            if (targetTab) {
+                targetTab.classList.add('active');
+                targetTab.classList.remove('hidden');
+            }
         });
     });
 }
