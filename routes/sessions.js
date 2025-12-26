@@ -176,4 +176,54 @@ router.delete('/:id', isAuthenticated, (req, res) => {
     }
 });
 
+// Delegate session
+router.post('/:id/delegate', isAuthenticated, (req, res) => {
+    const { id } = req.params;
+    const { name, access_code } = req.body;
+
+    if (!name || !access_code) {
+        return res.status(400).json({ error: 'Name and access code are required' });
+    }
+
+    try {
+        const session = db.getSessionById(parseInt(id));
+        if (!session || session.teacher_id !== req.session.teacherId) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        // Store delegation info in session
+        const result = db.delegateSession(parseInt(id), name.trim(), access_code.trim());
+
+        res.json({
+            success: true,
+            delegation: {
+                session_id: parseInt(id),
+                delegate_name: name.trim(),
+                access_code: access_code.trim()
+            }
+        });
+    } catch (err) {
+        console.error('Failed to delegate session:', err);
+        res.status(500).json({ error: 'Failed to delegate session' });
+    }
+});
+
+// Revoke delegation
+router.delete('/:id/delegate', isAuthenticated, (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const session = db.getSessionById(parseInt(id));
+        if (!session || session.teacher_id !== req.session.teacherId) {
+            return res.status(404).json({ error: 'Session not found' });
+        }
+
+        db.revokeDelegation(parseInt(id));
+        res.json({ success: true });
+    } catch (err) {
+        console.error('Failed to revoke delegation:', err);
+        res.status(500).json({ error: 'Failed to revoke delegation' });
+    }
+});
+
 module.exports = router;

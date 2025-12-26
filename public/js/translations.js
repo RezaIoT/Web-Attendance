@@ -208,7 +208,37 @@ const translations = {
         studentIdPlaceholder: "e.g., 123456789",
         bulkImportHintExtended: "Format: English Name | Farsi Name | Student ID (Farsi name and ID are optional)",
         classes: "classes",
-        viewModule: "View Details"
+        viewModule: "View Details",
+
+        // Reports
+        reports: "Reports",
+        analyticsReports: "Analytics & Reports",
+        avgAttendance: "Avg. Attendance",
+        totalModules: "Total Modules",
+        attendanceTrend: "Attendance Trend",
+        attendanceOverview: "Attendance Overview",
+        modulePerformance: "Module Performance",
+        studentAttendanceReport: "Student Attendance Report",
+        sessionsAttended: "Sessions Attended",
+        attendanceRate: "Attendance Rate",
+        exportReport: "Export Report",
+        allModules: "All Modules",
+        excellent: "Excellent",
+        good: "Good",
+        needsImprovement: "Needs Improvement",
+        critical: "Critical",
+
+        // Delegation
+        delegateSession: "Delegate Session",
+        delegateDescription: "Share this session with another person. They can view attendance using the access code.",
+        delegateName: "Delegate Name",
+        accessCode: "Access Code",
+        accessCodeHint: "The delegate will use this code to access the session",
+        delegate: "Delegate",
+        sessionDelegated: "Session delegated successfully!",
+        failedToDelegate: "Failed to delegate session",
+        confirmRevokeDelegation: "Are you sure you want to revoke this delegation?",
+        delegationRevoked: "Delegation revoked"
     },
 
     fa: {
@@ -418,7 +448,37 @@ const translations = {
         studentIdPlaceholder: "مثال: ۱۲۳۴۵۶۷۸۹",
         bulkImportHintExtended: "فرمت: نام انگلیسی | نام فارسی | شماره دانشجویی (نام فارسی و شماره دانشجویی اختیاری است)",
         classes: "کلاس",
-        viewModule: "مشاهده جزئیات"
+        viewModule: "مشاهده جزئیات",
+
+        // Reports
+        reports: "گزارش‌ها",
+        analyticsReports: "تحلیل و گزارش‌ها",
+        avgAttendance: "میانگین حضور",
+        totalModules: "کل ماژول‌ها",
+        attendanceTrend: "روند حضور و غیاب",
+        attendanceOverview: "نمای کلی حضور",
+        modulePerformance: "عملکرد ماژول‌ها",
+        studentAttendanceReport: "گزارش حضور دانشجویان",
+        sessionsAttended: "جلسات حاضر",
+        attendanceRate: "نرخ حضور",
+        exportReport: "خروجی گزارش",
+        allModules: "همه ماژول‌ها",
+        excellent: "عالی",
+        good: "خوب",
+        needsImprovement: "نیاز به بهبود",
+        critical: "بحرانی",
+
+        // Delegation
+        delegateSession: "واگذاری جلسه",
+        delegateDescription: "این جلسه را با شخص دیگری به اشتراک بگذارید. آنها می‌توانند با کد دسترسی حضور را مشاهده کنند.",
+        delegateName: "نام نماینده",
+        accessCode: "کد دسترسی",
+        accessCodeHint: "نماینده از این کد برای دسترسی به جلسه استفاده می‌کند",
+        delegate: "واگذاری",
+        sessionDelegated: "جلسه با موفقیت واگذار شد!",
+        failedToDelegate: "واگذاری جلسه ناموفق بود",
+        confirmRevokeDelegation: "آیا از لغو این واگذاری مطمئن هستید؟",
+        delegationRevoked: "واگذاری لغو شد"
     }
 };
 

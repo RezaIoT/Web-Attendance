@@ -1451,3 +1451,184 @@ body.rtl {
 .rtl .module-stat {
     text-align: center;
 }
+
+/* ========================================
+   Reports & Analytics Section
+   ======================================== */
+
+.report-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.25rem;
+    background: white;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+    transition: var(--transition);
+}
+
+.report-card:hover {
+    box-shadow: var(--shadow-lg);
+    transform: translateY(-2px);
+}
+
+.report-card-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.report-card-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.report-card-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1.2;
+}
+
+.report-card-label {
+    font-size: 0.875rem;
+    color: var(--gray-500);
+    font-weight: 500;
+}
+
+.chart-container {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+    border: 1px solid var(--gray-200);
+}
+
+.chart-container h4 {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+/* Attendance status badges for reports */
+.status-excellent {
+    background: var(--success-light, #dcfce7);
+    color: var(--success, #16a34a);
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-good {
+    background: #dbeafe;
+    color: #2563eb;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-warning {
+    background: var(--warning-light, #fef3c7);
+    color: var(--warning, #d97706);
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.status-critical {
+    background: #fee2e2;
+    color: #dc2626;
+    padding: 0.25rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+/* Progress bar for attendance */
+.progress-bar-container {
+    width: 100%;
+    height: 8px;
+    background: var(--gray-200);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.progress-bar.excellent { background: var(--success, #16a34a); }
+.progress-bar.good { background: #2563eb; }
+.progress-bar.warning { background: var(--warning, #d97706); }
+.progress-bar.critical { background: #dc2626; }
+
+/* Delegate button styles */
+.delegate-btn {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--transition);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.delegate-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+/* Delegated session indicator */
+.delegated-badge {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+/* Responsive adjustments for reports */
+@media (max-width: 768px) {
+    .charts-row {
+        grid-template-columns: 1fr !important;
+    }
+    
+    .report-card {
+        padding: 1rem;
+    }
+    
+    .report-card-value {
+        font-size: 1.5rem;
+    }
+    
+    .report-card-icon {
+        width: 48px;
+        height: 48px;
+    }
+}
+
+/* RTL support for reports */
+.rtl .report-card {
+    flex-direction: row-reverse;
+}
+
+.rtl .report-card-content {
+    text-align: right;
+}

@@ -933,6 +933,11 @@ function renderSessionsTable(sessions) {
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                             ${t('view')}
                         </button>
+                        ${session.is_active ? `
+                        <button class="delegate-btn btn-sm" onclick="openDelegateModal(${session.id})" title="${t('delegateSession') || 'Delegate'}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
+                        </button>
+                        ` : ''}
                         <button class="btn btn-danger btn-sm" onclick="deleteSession(${session.id})">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         </button>
@@ -1178,3 +1183,317 @@ function escapeHtml(text) {
     div.textContent = text;
     return div.innerHTML;
 }
+
+// ========================================
+// Reports & Analytics
+// ========================================
+
+let attendanceTrendChart = null;
+let attendancePieChart = null;
+let modulePerformanceChart = null;
+
+async function loadReports(moduleId = null) {
+    try {
+        const url = moduleId ? '/api/reports?module_id=' + moduleId : '/api/reports';
+        const response = await fetch(url);
+        const data = await response.json();
+
+        // Update summary cards
+        document.getElementById('reportTotalStudents').textContent = data.summary.total_students;
+        document.getElementById('reportAvgAttendance').textContent = data.summary.avg_attendance + '%';
+        document.getElementById('reportTotalSessions').textContent = data.summary.total_sessions;
+        document.getElementById('reportTotalModules').textContent = data.summary.total_modules;
+
+        // Update charts
+        updateAttendanceTrendChart(data.trend);
+        updateAttendancePieChart(data.overview);
+        updateModulePerformanceChart(data.modules);
+
+        // Update student report table
+        renderStudentReport(data.students);
+
+        // Update module filter dropdown
+        updateReportModuleFilter(data.modules);
+    } catch (err) {
+        console.error('Failed to load reports:', err);
+    }
+}
+
+function updateAttendanceTrendChart(trendData) {
+    const ctx = document.getElementById('attendanceTrendChart');
+    if (!ctx) return;
+
+    if (attendanceTrendChart) {
+        attendanceTrendChart.destroy();
+    }
+
+    const labels = trendData.map(function(d) { return d.label; });
+    const presentData = trendData.map(function(d) { return d.present; });
+    const absentData = trendData.map(function(d) { return d.absent; });
+
+    attendanceTrendChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [
+                {
+                    label: t('present') || 'Present',
+                    data: presentData,
+                    borderColor: '#16a34a',
+                    backgroundColor: 'rgba(22, 163, 74, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                },
+                {
+                    label: t('absent') || 'Absent',
+                    data: absentData,
+                    borderColor: '#dc2626',
+                    backgroundColor: 'rgba(220, 38, 38, 0.1)',
+                    fill: true,
+                    tension: 0.4
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    });
+}
+
+function updateAttendancePieChart(overviewData) {
+    const ctx = document.getElementById('attendancePieChart');
+    if (!ctx) return;
+
+    if (attendancePieChart) {
+        attendancePieChart.destroy();
+    }
+
+    attendancePieChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [t('present') || 'Present', t('absent') || 'Absent'],
+            datasets: [{
+                data: [overviewData.present, overviewData.absent],
+                backgroundColor: ['#16a34a', '#dc2626'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                }
+            },
+            cutout: '60%'
+        }
+    });
+}
+
+function updateModulePerformanceChart(modulesData) {
+    const ctx = document.getElementById('modulePerformanceChart');
+    if (!ctx) return;
+
+    if (modulePerformanceChart) {
+        modulePerformanceChart.destroy();
+    }
+
+    const labels = modulesData.map(function(m) { return m.name; });
+    const attendanceRates = modulesData.map(function(m) { return m.attendance_rate; });
+
+    modulePerformanceChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: t('attendanceRate') || 'Attendance Rate (%)',
+                data: attendanceRates,
+                backgroundColor: attendanceRates.map(function(rate) {
+                    if (rate >= 80) return '#16a34a';
+                    if (rate >= 60) return '#2563eb';
+                    if (rate >= 40) return '#d97706';
+                    return '#dc2626';
+                }),
+                borderRadius: 8
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    max: 100,
+                    ticks: {
+                        callback: function(value) { return value + '%'; }
+                    }
+                }
+            }
+        }
+    });
+}
+
+function renderStudentReport(students) {
+    const tbody = document.getElementById('studentReportBody');
+    if (!tbody) return;
+
+    if (students.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center text-muted">' + (t('noStudentsFound') || 'No students found') + '</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = students.map(function(s) {
+        const rate = s.attendance_rate;
+        let statusClass, statusText;
+
+        if (rate >= 80) {
+            statusClass = 'status-excellent';
+            statusText = t('excellent') || 'Excellent';
+        } else if (rate >= 60) {
+            statusClass = 'status-good';
+            statusText = t('good') || 'Good';
+        } else if (rate >= 40) {
+            statusClass = 'status-warning';
+            statusText = t('needsImprovement') || 'Needs Improvement';
+        } else {
+            statusClass = 'status-critical';
+            statusText = t('critical') || 'Critical';
+        }
+
+        const progressClass = rate >= 80 ? 'excellent' : rate >= 60 ? 'good' : rate >= 40 ? 'warning' : 'critical';
+
+        return '<tr>' +
+            '<td><div>' + escapeHtml(s.name) + '</div>' +
+            (s.name_fa ? '<small class="text-muted">' + escapeHtml(s.name_fa) + '</small>' : '') +
+            '</td>' +
+            '<td>' + escapeHtml(s.module_name || '-') + '</td>' +
+            '<td>' + s.sessions_attended + '</td>' +
+            '<td>' + s.total_sessions + '</td>' +
+            '<td><div style="display: flex; align-items: center; gap: 0.5rem;">' +
+            '<div class="progress-bar-container" style="width: 60px;">' +
+            '<div class="progress-bar ' + progressClass + '" style="width: ' + rate + '%;"></div>' +
+            '</div><span>' + rate + '%</span></div></td>' +
+            '<td><span class="' + statusClass + '">' + statusText + '</span></td>' +
+            '</tr>';
+    }).join('');
+}
+
+function updateReportModuleFilter(modules) {
+    const select = document.getElementById('reportModuleFilter');
+    if (!select) return;
+
+    select.innerHTML = '<option value="">' + (t('allModules') || 'All Modules') + '</option>';
+
+    modules.forEach(function(m) {
+        const option = document.createElement('option');
+        option.value = m.id;
+        option.textContent = m.name;
+        select.appendChild(option);
+    });
+
+    select.onchange = function() { loadReports(select.value || null); };
+}
+
+function exportFullReport() {
+    const moduleId = document.getElementById('reportModuleFilter').value;
+    const url = moduleId ? '/api/reports/export?module_id=' + moduleId : '/api/reports/export';
+    window.location.href = url;
+}
+
+function exportStudentReport() {
+    const moduleId = document.getElementById('reportModuleFilter').value;
+    const url = moduleId ? '/api/reports/students/export?module_id=' + moduleId : '/api/reports/students/export';
+    window.location.href = url;
+}
+
+// ========================================
+// Session Delegation
+// ========================================
+
+function openDelegateModal(sessionId) {
+    document.getElementById('delegateSessionId').value = sessionId;
+    document.getElementById('delegateForm').reset();
+    openModal('delegateModal');
+}
+
+async function delegateSession(e) {
+    e.preventDefault();
+
+    const sessionId = document.getElementById('delegateSessionId').value;
+    const delegateName = document.getElementById('delegateName').value.trim();
+    const delegateCode = document.getElementById('delegateCode').value.trim();
+
+    try {
+        const response = await fetch('/api/sessions/' + sessionId + '/delegate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name: delegateName,
+                access_code: delegateCode
+            })
+        });
+
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            closeModal('delegateModal');
+            showToast(t('sessionDelegated') || 'Session delegated successfully!', 'success');
+            await loadSessions();
+            await loadActiveSession();
+        } else {
+            showToast(data.error || t('failedToDelegate') || 'Failed to delegate session', 'error');
+        }
+    } catch (err) {
+        showToast(t('connectionError'), 'error');
+    }
+}
+
+async function revokeDelegation(sessionId) {
+    if (!confirm(t('confirmRevokeDelegation') || 'Are you sure you want to revoke this delegation?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/sessions/' + sessionId + '/delegate', {
+            method: 'DELETE'
+        });
+
+        if (response.ok) {
+            showToast(t('delegationRevoked') || 'Delegation revoked', 'success');
+            await loadSessions();
+            await loadActiveSession();
+        }
+    } catch (err) {
+        showToast(t('connectionError'), 'error');
+    }
+}
+
+// Initialize reports tab listener
+document.addEventListener('DOMContentLoaded', function() {
+    const reportsTab = document.querySelector('[data-tab="reports"]');
+    if (reportsTab) {
+        reportsTab.addEventListener('click', function() {
+            setTimeout(function() { loadReports(); }, 100);
+        });
+    }
+});

@@ -130,6 +130,18 @@ function initialize() {
         // Column already exists
     }
 
+    // Add delegation columns to class_sessions if not exists (migration)
+    try {
+        database.exec(`ALTER TABLE class_sessions ADD COLUMN delegate_name TEXT`);
+    } catch (e) {
+        // Column already exists
+    }
+    try {
+        database.exec(`ALTER TABLE class_sessions ADD COLUMN delegate_code TEXT`);
+    } catch (e) {
+        // Column already exists
+    }
+
     // Create default admin user if not exists
     const adminExists = database.prepare('SELECT id FROM teachers WHERE username = ?').get('admin');
     if (!adminExists) {
@@ -327,6 +339,18 @@ function deleteSession(id, teacherId) {
     return getDb().prepare('DELETE FROM class_sessions WHERE id = ? AND teacher_id = ?').run(id, teacherId);
 }
 
+function delegateSession(sessionId, delegateName, accessCode) {
+    return getDb().prepare(
+        'UPDATE class_sessions SET delegate_name = ?, delegate_code = ? WHERE id = ?'
+    ).run(delegateName, accessCode, sessionId);
+}
+
+function revokeDelegation(sessionId) {
+    return getDb().prepare(
+        'UPDATE class_sessions SET delegate_name = NULL, delegate_code = NULL WHERE id = ?'
+    ).run(sessionId);
+}
+
 function verifySessionPasskey(passkey) {
     return getDb().prepare(`
         SELECT cs.*, t.name as teacher_name, m.name as module_name, m.code as module_code
@@ -456,6 +480,8 @@ module.exports = {
     updateSession,
     toggleSession,
     deleteSession,
+    delegateSession,
+    revokeDelegation,
     verifySessionPasskey,
     // Attendance
     recordAttendance,
