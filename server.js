@@ -12,6 +12,7 @@ const studentRoutes = require('./routes/students');
 const sessionRoutes = require('./routes/sessions');
 const attendanceRoutes = require('./routes/attendance');
 const reportRoutes = require('./routes/reports');
+const dashboardRoutes = require('./routes/dashboard');
 
 const app = express();
 app.set('trust proxy', true);
@@ -55,6 +56,7 @@ app.use('/api/students', studentRoutes);
 app.use('/api/sessions', sessionRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/reports', reportRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // Serve frontend pages
 app.get('/', (req, res) => {

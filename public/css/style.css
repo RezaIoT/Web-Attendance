@@ -1632,3 +1632,151 @@ body.rtl {
 .rtl .report-card-content {
     text-align: right;
 }
+
+/* ========================================
+   Dashboard Overview Styles
+   ======================================== */
+
+.quick-stat-card {
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid var(--gray-200);
+    transition: var(--transition);
+}
+
+.quick-stat-card:hover {
+    box-shadow: var(--shadow);
+    transform: translateY(-2px);
+}
+
+.quick-stat-card.success {
+    background: var(--success-light, #dcfce7);
+    border-color: var(--success, #16a34a);
+}
+
+.quick-stat-card.warning {
+    background: var(--warning-light, #fef3c7);
+    border-color: var(--warning, #d97706);
+}
+
+.quick-stat-card.info {
+    background: #dbeafe;
+    border-color: #2563eb;
+}
+
+.quick-stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--gray-900);
+    line-height: 1.2;
+}
+
+.quick-stat-card.success .quick-stat-value { color: var(--success, #16a34a); }
+.quick-stat-card.warning .quick-stat-value { color: var(--warning, #d97706); }
+.quick-stat-card.info .quick-stat-value { color: #2563eb; }
+
+.quick-stat-label {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 0.25rem;
+}
+
+.mini-chart-container {
+    background: var(--gray-50);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    border: 1px solid var(--gray-200);
+}
+
+/* Pulse dot for live indicator */
+.pulse-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--success);
+    border-radius: 50%;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+/* Active Sessions List */
+.active-sessions-list {
+    border-top: 1px solid var(--gray-200);
+    padding-top: 1rem;
+}
+
+.active-session-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: white;
+    border: 1px solid var(--gray-200);
+    border-radius: var(--radius);
+    margin-bottom: 0.5rem;
+    transition: var(--transition);
+}
+
+.active-session-item:hover {
+    border-color: var(--primary);
+    box-shadow: var(--shadow);
+}
+
+.session-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.session-info .session-title {
+    font-weight: 600;
+    color: var(--gray-800);
+}
+
+.session-info .session-meta {
+    font-size: 0.75rem;
+    color: var(--gray-500);
+    display: flex;
+    gap: 0.75rem;
+}
+
+.session-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.passkey-badge {
+    background: var(--primary-light);
+    color: var(--primary);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius);
+    font-family: monospace;
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+/* Responsive for quick stats */
+@media (max-width: 768px) {
+    .quick-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+    
+    .quick-stat-value {
+        font-size: 1.25rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .quick-stats {
+        grid-template-columns: 1fr !important;
+    }
+}

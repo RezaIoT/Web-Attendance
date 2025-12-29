@@ -228,6 +228,23 @@ const translations = {
         needsImprovement: "Needs Improvement",
         critical: "Critical",
 
+        // Dashboard Overview
+        dashboardOverview: "Dashboard Overview",
+        activeSessions: "Active Sessions",
+        todayAttendance: "Today's Attendance",
+        pendingStudents: "Pending Students",
+        weeklyTrend: "Weekly Trend",
+        liveUpdates: "Live Updates",
+        noActiveSessions: "No Active Sessions",
+        pauseSession: "Pause",
+        viewSession: "View",
+        filterByModule: "Filter by Module",
+        autoRefresh: "Auto-refresh",
+        createSession: "Create Session",
+        attendanceToday: "Attendance Today",
+        currentActiveSessions: "Current Active Sessions",
+        yourModules: "Your Modules",
+
         // Delegation
         delegateSession: "Delegate Session",
         delegateDescription: "Share this session with another person. They can view attendance using the access code.",
@@ -467,6 +484,23 @@ const translations = {
         good: "خوب",
         needsImprovement: "نیاز به بهبود",
         critical: "بحرانی",
+
+        // Dashboard Overview
+        dashboardOverview: "نمای کلی داشبورد",
+        activeSessions: "جلسات فعال",
+        todayAttendance: "حضور امروز",
+        pendingStudents: "دانشجویان در انتظار",
+        weeklyTrend: "روند هفتگی",
+        liveUpdates: "بروزرسانی زنده",
+        noActiveSessions: "جلسه فعالی وجود ندارد",
+        pauseSession: "توقف",
+        viewSession: "مشاهده",
+        filterByModule: "فیلتر بر اساس ماژول",
+        autoRefresh: "بروزرسانی خودکار",
+        createSession: "ایجاد جلسه",
+        attendanceToday: "حضور امروز",
+        currentActiveSessions: "جلسات فعال فعلی",
+        yourModules: "ماژول‌های شما",
 
         // Delegation
         delegateSession: "واگذاری جلسه",

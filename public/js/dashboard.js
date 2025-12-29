@@ -9,6 +9,10 @@ let currentDetailsSessionId = null;
 let currentModuleId = null;    // Currently viewed module
 let currentModuleData = null;  // Current module full data
 let refreshInterval = null;
+let dashboardRefreshInterval = null;
+let overviewPieChartInstance = null;
+let overviewTrendChartInstance = null;
+const AUTO_REFRESH_INTERVAL = 5000; // 5 seconds for real-time updates
 
 // ========================================
 // Initialization
@@ -74,12 +78,12 @@ async function checkAuth() {
         // Load initial data
         await Promise.all([
             loadModules(),
-            loadActiveSession(),
+            loadDashboardOverview(),
             loadSessions()
         ]);
 
-        // Start auto-refresh for active session
-        startAutoRefresh();
+        // Start auto-refresh for dashboard (real-time updates)
+        startDashboardAutoRefresh();
     } catch (err) {
         console.error('Auth check failed:', err);
         window.location.href = '/teacher';
@@ -91,13 +95,9 @@ function setupEventListeners() {
     document.getElementById('logoutBtn').addEventListener('click', logout);
 
     // Forms
-    document.getElementById('newSessionForm').addEventListener('submit', createSession);
     document.getElementById('addStudentForm').addEventListener('submit', addStudent);
     document.getElementById('editStudentForm').addEventListener('submit', updateStudent);
     document.getElementById('bulkImportForm').addEventListener('submit', bulkImportStudents);
-
-    // Session toggle
-    document.getElementById('sessionToggle').addEventListener('change', toggleSession);
 
     // Module forms
     document.getElementById('addModuleForm').addEventListener('submit', createModule);
@@ -141,6 +141,206 @@ function setupTabs() {
             if (tabContent) tabContent.classList.add('active');
         });
     });
+}
+
+// ========================================
+// Dashboard Overview (Real-time)
+// ========================================
+
+async function loadDashboardOverview() {
+    try {
+        const moduleId = document.getElementById('overviewModuleFilter').value;
+        const url = moduleId ? '/api/dashboard/overview?module_id=' + moduleId : '/api/dashboard/overview';
+        const response = await fetch(url);
+        const data = await response.json();
+
+        // Update quick stats
+        document.getElementById('overviewActiveSessionsCount').textContent = data.active_sessions_count;
+        document.getElementById('overviewTodayAttendance').textContent = data.today_attendance_rate + '%';
+        document.getElementById('overviewPendingStudents').textContent = data.pending_students;
+        document.getElementById('overviewTotalModules').textContent = data.total_modules;
+
+        // Update stats grid
+        document.getElementById('totalStudents').textContent = data.total_students;
+        document.getElementById('presentCount').textContent = data.today_present;
+        document.getElementById('absentCount').textContent = data.today_absent;
+        document.getElementById('totalSessions').textContent = data.total_sessions;
+
+        // Update charts
+        updateOverviewPieChart(data.today_present, data.today_absent);
+        updateOverviewTrendChart(data.weekly_trend);
+
+        // Update active sessions list
+        renderActiveSessionsList(data.active_sessions);
+
+        // Update module filter dropdown
+        updateOverviewModuleFilter();
+    } catch (err) {
+        console.error('Failed to load dashboard overview:', err);
+    }
+}
+
+function updateOverviewPieChart(present, absent) {
+    const ctx = document.getElementById('overviewPieChart');
+    if (!ctx) return;
+
+    if (overviewPieChartInstance) {
+        overviewPieChartInstance.data.datasets[0].data = [present, absent];
+        overviewPieChartInstance.update('none');
+        return;
+    }
+
+    overviewPieChartInstance = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            labels: [t('present') || 'Present', t('absent') || 'Absent'],
+            datasets: [{
+                data: [present, absent],
+                backgroundColor: ['#16a34a', '#dc2626'],
+                borderWidth: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } }
+            },
+            cutout: '65%'
+        }
+    });
+}
+
+function updateOverviewTrendChart(trendData) {
+    const ctx = document.getElementById('overviewTrendChart');
+    if (!ctx) return;
+
+    const labels = trendData.map(function(d) { return d.day; });
+    const presentData = trendData.map(function(d) { return d.present; });
+
+    if (overviewTrendChartInstance) {
+        overviewTrendChartInstance.data.labels = labels;
+        overviewTrendChartInstance.data.datasets[0].data = presentData;
+        overviewTrendChartInstance.update('none');
+        return;
+    }
+
+    overviewTrendChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: t('attendance') || 'Attendance',
+                data: presentData,
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.4,
+                pointRadius: 3,
+                pointBackgroundColor: '#6366f1'
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false }
+            },
+            scales: {
+                y: { beginAtZero: true, ticks: { stepSize: 1 } },
+                x: { grid: { display: false } }
+            }
+        }
+    });
+}
+
+function renderActiveSessionsList(sessions) {
+    const container = document.getElementById('activeSessionsContent');
+    if (!container) return;
+
+    if (!sessions || sessions.length === 0) {
+        container.innerHTML = '<p class="text-muted text-center" style="padding: 1rem;">' + (t('noActiveSessions') || 'No active sessions. Create one from a module.') + '</p>';
+        return;
+    }
+
+    container.innerHTML = sessions.map(function(session) {
+        const moduleName = session.module_name ? session.module_name : (t('noModule') || 'Quick Session');
+        return '<div class="active-session-item">' +
+            '<div class="session-info">' +
+                '<span class="session-title">' + escapeHtml(session.name) + '</span>' +
+                '<span class="session-meta">' +
+                    '<span>' + escapeHtml(moduleName) + '</span>' +
+                    '<span>' + session.attendance_count + ' ' + (t('present') || 'present') + '</span>' +
+                '</span>' +
+            '</div>' +
+            '<div class="session-controls">' +
+                '<span class="passkey-badge">' + escapeHtml(session.passkey) + '</span>' +
+                '<button class="btn btn-sm btn-secondary" onclick="viewSessionDetails(' + session.id + ')">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>' +
+                '</button>' +
+                '<button class="btn btn-sm btn-warning" onclick="toggleSessionFromList(' + session.id + ', false)">' +
+                    '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>' +
+                '</button>' +
+            '</div>' +
+        '</div>';
+    }).join('');
+}
+
+function updateOverviewModuleFilter() {
+    const select = document.getElementById('overviewModuleFilter');
+    if (!select) return;
+
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">' + (t('allModules') || 'All Modules') + '</option>';
+
+    allModules.forEach(function(m) {
+        const option = document.createElement('option');
+        option.value = m.id;
+        option.textContent = m.name;
+        if (m.id == currentValue) option.selected = true;
+        select.appendChild(option);
+    });
+}
+
+function updateDashboardCharts() {
+    loadDashboardOverview();
+}
+
+async function toggleSessionFromList(sessionId, isActive) {
+    try {
+        const response = await fetch('/api/sessions/' + sessionId + '/toggle', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ is_active: isActive })
+        });
+
+        if (response.ok) {
+            showToast(isActive ? (t('sessionActivated') || 'Session activated') : (t('sessionPaused') || 'Session paused'), 'success');
+            await loadDashboardOverview();
+            await loadSessions();
+        }
+    } catch (err) {
+        showToast(t('connectionError'), 'error');
+    }
+}
+
+function startDashboardAutoRefresh() {
+    // Clear any existing interval
+    if (dashboardRefreshInterval) {
+        clearInterval(dashboardRefreshInterval);
+    }
+
+    // Auto-refresh every 5 seconds
+    dashboardRefreshInterval = setInterval(function() {
+        loadDashboardOverview();
+    }, AUTO_REFRESH_INTERVAL);
+}
+
+function stopDashboardAutoRefresh() {
+    if (dashboardRefreshInterval) {
+        clearInterval(dashboardRefreshInterval);
+        dashboardRefreshInterval = null;
+    }
 }
 
 // ========================================
