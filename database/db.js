@@ -200,14 +200,37 @@ function updateModule(id, teacherId, updates) {
 }
 
 function deleteModule(id, teacherId) {
-    // Delete all related data
-    const sessions = getDb().prepare('SELECT id FROM class_sessions WHERE module_id = ?').all(id);
-    sessions.forEach(s => {
-        getDb().prepare('DELETE FROM attendance WHERE session_id = ?').run(s.id);
+    const database = getDb();
+
+    // Use transaction to ensure all deletions happen together
+    const deleteAll = database.transaction(() => {
+        // Get all sessions for this module
+        const sessions = database.prepare('SELECT id FROM class_sessions WHERE module_id = ?').all(id);
+
+        // Delete attendance for each session
+        sessions.forEach(s => {
+            database.prepare('DELETE FROM attendance WHERE session_id = ?').run(s.id);
+        });
+
+        // Get all students for this module
+        const students = database.prepare('SELECT id FROM students WHERE module_id = ?').all(id);
+
+        // Delete attendance for each student (in case they attended other sessions)
+        students.forEach(s => {
+            database.prepare('DELETE FROM attendance WHERE student_id = ?').run(s.id);
+        });
+
+        // Now delete sessions
+        database.prepare('DELETE FROM class_sessions WHERE module_id = ?').run(id);
+
+        // Delete students
+        database.prepare('DELETE FROM students WHERE module_id = ?').run(id);
+
+        // Finally delete the module
+        return database.prepare('DELETE FROM modules WHERE id = ? AND teacher_id = ?').run(id, teacherId);
     });
-    getDb().prepare('DELETE FROM class_sessions WHERE module_id = ?').run(id);
-    getDb().prepare('DELETE FROM students WHERE module_id = ?').run(id);
-    return getDb().prepare('DELETE FROM modules WHERE id = ? AND teacher_id = ?').run(id, teacherId);
+
+    return deleteAll();
 }
 
 // ========================================
