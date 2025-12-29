@@ -343,6 +343,7 @@ function startDashboardAutoRefresh() {
     // Auto-refresh every 5 seconds
     dashboardRefreshInterval = setInterval(function() {
         loadDashboardOverview();
+        loadModules(); // Also refresh module cards
     }, AUTO_REFRESH_INTERVAL);
 }
 
