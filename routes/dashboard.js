@@ -19,10 +19,19 @@ router.get('/overview', isAuthenticated, (req, res) => {
         // Get active sessions
         const activeSessions = db.getActiveSessions(teacherId);
 
+        // Add attendance count to each active session
+        const activeSessionsWithCount = activeSessions.map(session => {
+            const attendance = db.getSessionAttendance(session.id);
+            return {
+                ...session,
+                attendance_count: attendance.length
+            };
+        });
+
         // Filter by module if specified
         const filteredActiveSessions = module_id
-            ? activeSessions.filter(s => s.module_id === parseInt(module_id))
-            : activeSessions;
+            ? activeSessionsWithCount.filter(s => s.module_id === parseInt(module_id))
+            : activeSessionsWithCount;
 
         // Calculate total students
         let totalStudents = 0;
