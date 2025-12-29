@@ -1609,9 +1609,12 @@ function renderStudentReport(students) {
     }).join('');
 }
 
-function updateReportModuleFilter(modules) {
+function updateReportModuleFilter(modules, preserveValue) {
     const select = document.getElementById('reportModuleFilter');
     if (!select) return;
+
+    // Preserve current selection
+    const currentValue = preserveValue !== undefined ? preserveValue : select.value;
 
     select.innerHTML = '<option value="">' + (t('allModules') || 'All Modules') + '</option>';
 
@@ -1622,7 +1625,18 @@ function updateReportModuleFilter(modules) {
         select.appendChild(option);
     });
 
-    select.onchange = function() { loadReports(select.value || null); };
+    // Restore selection
+    if (currentValue) {
+        select.value = currentValue;
+    }
+
+    // Only set onchange once
+    if (!select.dataset.listenerAttached) {
+        select.addEventListener('change', function() {
+            loadReports(select.value || null);
+        });
+        select.dataset.listenerAttached = 'true';
+    }
 }
 
 function exportFullReport() {
