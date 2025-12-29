@@ -41,16 +41,23 @@ router.get('/overview', isAuthenticated, (req, res) => {
             totalStudents = modules.reduce((sum, m) => sum + (m.student_count || 0), 0);
         }
 
-        // Calculate today's attendance
+        // Calculate today's attendance (include active sessions even if created earlier)
         const today = new Date().toISOString().split('T')[0];
         let todayPresent = 0;
         let todayPossible = 0;
 
+        // Include both today's sessions AND active sessions
         const todaySessions = module_id
-            ? allSessions.filter(s => s.module_id === parseInt(module_id) && s.created_at.startsWith(today))
-            : allSessions.filter(s => s.created_at.startsWith(today));
+            ? allSessions.filter(s => s.module_id === parseInt(module_id) && (s.created_at.startsWith(today) || s.is_active))
+            : allSessions.filter(s => s.created_at.startsWith(today) || s.is_active);
+
+        // Use Set to avoid counting same session twice
+        const processedSessionIds = new Set();
 
         todaySessions.forEach(session => {
+            if (processedSessionIds.has(session.id)) return;
+            processedSessionIds.add(session.id);
+
             const attendance = db.getSessionAttendance(session.id);
             todayPresent += attendance.length;
 

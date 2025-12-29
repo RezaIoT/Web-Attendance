@@ -244,6 +244,7 @@ const translations = {
         attendanceToday: "Attendance Today",
         currentActiveSessions: "Current Active Sessions",
         yourModules: "Your Modules",
+        noData: "No Data",
 
         // Delegation
         delegateSession: "Delegate Session",
@@ -501,6 +502,7 @@ const translations = {
         attendanceToday: "حضور امروز",
         currentActiveSessions: "جلسات فعال فعلی",
         yourModules: "ماژول‌های شما",
+        noData: "بدون داده",
 
         // Delegation
         delegateSession: "واگذاری جلسه",

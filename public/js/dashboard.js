@@ -184,8 +184,18 @@ function updateOverviewPieChart(present, absent) {
     const ctx = document.getElementById('overviewPieChart');
     if (!ctx) return;
 
+    // If no data, show placeholder
+    const hasData = present > 0 || absent > 0;
+    const chartData = hasData ? [present, absent] : [1];
+    const chartColors = hasData ? ['#16a34a', '#dc2626'] : ['#e5e7eb'];
+    const chartLabels = hasData
+        ? [t('present') || 'Present', t('absent') || 'Absent']
+        : [t('noData') || 'No Data'];
+
     if (overviewPieChartInstance) {
-        overviewPieChartInstance.data.datasets[0].data = [present, absent];
+        overviewPieChartInstance.data.labels = chartLabels;
+        overviewPieChartInstance.data.datasets[0].data = chartData;
+        overviewPieChartInstance.data.datasets[0].backgroundColor = chartColors;
         overviewPieChartInstance.update('none');
         return;
     }
@@ -193,10 +203,10 @@ function updateOverviewPieChart(present, absent) {
     overviewPieChartInstance = new Chart(ctx, {
         type: 'doughnut',
         data: {
-            labels: [t('present') || 'Present', t('absent') || 'Absent'],
+            labels: chartLabels,
             datasets: [{
-                data: [present, absent],
-                backgroundColor: ['#16a34a', '#dc2626'],
+                data: chartData,
+                backgroundColor: chartColors,
                 borderWidth: 0
             }]
         },
