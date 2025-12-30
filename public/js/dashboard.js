@@ -344,6 +344,7 @@ function startDashboardAutoRefresh() {
     dashboardRefreshInterval = setInterval(function() {
         loadDashboardOverview();
         loadModules(); // Also refresh module cards
+        loadSessions(); // Also refresh session history
     }, AUTO_REFRESH_INTERVAL);
 }
 
