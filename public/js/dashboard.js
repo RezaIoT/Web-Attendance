@@ -1145,11 +1145,6 @@ function renderSessionsTable(sessions) {
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                             ${t('view')}
                         </button>
-                        ${session.is_active ? `
-                        <button class="delegate-btn btn-sm" onclick="openDelegateModal(${session.id})" title="${t('delegateSession') || 'Delegate'}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><path d="M20 8v6"/><path d="M23 11h-6"/></svg>
-                        </button>
-                        ` : ''}
                         <button class="btn btn-danger btn-sm" onclick="deleteSession(${session.id})">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                         </button>
@@ -1650,68 +1645,6 @@ function exportStudentReport() {
     const moduleId = document.getElementById('reportModuleFilter').value;
     const url = moduleId ? '/api/reports/students/export?module_id=' + moduleId : '/api/reports/students/export';
     window.location.href = url;
-}
-
-// ========================================
-// Session Delegation
-// ========================================
-
-function openDelegateModal(sessionId) {
-    document.getElementById('delegateSessionId').value = sessionId;
-    document.getElementById('delegateForm').reset();
-    openModal('delegateModal');
-}
-
-async function delegateSession(e) {
-    e.preventDefault();
-
-    const sessionId = document.getElementById('delegateSessionId').value;
-    const delegateName = document.getElementById('delegateName').value.trim();
-    const delegateCode = document.getElementById('delegateCode').value.trim();
-
-    try {
-        const response = await fetch('/api/sessions/' + sessionId + '/delegate', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                name: delegateName,
-                access_code: delegateCode
-            })
-        });
-
-        const data = await response.json();
-
-        if (response.ok && data.success) {
-            closeModal('delegateModal');
-            showToast(t('sessionDelegated') || 'Session delegated successfully!', 'success');
-            await loadSessions();
-            await loadActiveSession();
-        } else {
-            showToast(data.error || t('failedToDelegate') || 'Failed to delegate session', 'error');
-        }
-    } catch (err) {
-        showToast(t('connectionError'), 'error');
-    }
-}
-
-async function revokeDelegation(sessionId) {
-    if (!confirm(t('confirmRevokeDelegation') || 'Are you sure you want to revoke this delegation?')) {
-        return;
-    }
-
-    try {
-        const response = await fetch('/api/sessions/' + sessionId + '/delegate', {
-            method: 'DELETE'
-        });
-
-        if (response.ok) {
-            showToast(t('delegationRevoked') || 'Delegation revoked', 'success');
-            await loadSessions();
-            await loadActiveSession();
-        }
-    } catch (err) {
-        showToast(t('connectionError'), 'error');
-    }
 }
 
 // Initialize reports tab listener
